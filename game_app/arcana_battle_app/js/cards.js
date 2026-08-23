@@ -9,6 +9,7 @@ export const TOKENS = {
   wolf_token: { id: "wolf_token", name: "狼", emoji: "🐺", atk: 1, hp: 1, keywords: [] },
   giant_wolf_token: { id: "giant_wolf_token", name: "巨狼", emoji: "🐺", atk: 2, hp: 2, keywords: [] },
   fire_wolf_token: { id: "fire_wolf_token", name: "業火狼", emoji: "🔥", atk: 2, hp: 2, keywords: [] },
+  imp_token: { id: "imp_token", name: "小悪魔", emoji: "👹", atk: 1, hp: 1, keywords: [] },
 };
 
 export const STANDARD_CARDS = [
@@ -48,7 +49,17 @@ export const EXPANSIONS = {
   flame: {
     id: "flame",
     name: "焔の書",
+    packEmoji: "🔥📦",
     description: "炎と竜の力を宿す拡張パック",
+    packCost: 100,
+    cardsPerPack: 5,
+    rarityOdds: { common: 0.70, rare: 0.22, epic: 0.06, legendary: 0.02 },
+  },
+  abyss: {
+    id: "abyss",
+    name: "深淵の書",
+    packEmoji: "😈📦",
+    description: "悪魔と契約の力を宿す拡張パック第2弾",
     packCost: 100,
     cardsPerPack: 5,
     rarityOdds: { common: 0.70, rare: 0.22, epic: 0.06, legendary: 0.02 },
@@ -81,6 +92,32 @@ export const EXPANSION_CARDS = {
     // legendary
     { id: "fl_l1", name: "古代の紅竜アルカディオン", emoji: "🐲", cost: 8, type: "minion", atk: 8, hp: 8, keywords: ["taunt", "charge"], rarity: "legendary", set: "flame", text: "挑発・速攻。戦場に出た時: 敵に4ダメージ", battlecry: { type: "damage", value: 4, target: "enemy_face" } },
     { id: "fl_l2", name: "不死鳥ロード", emoji: "🔥🕊️", cost: 7, type: "minion", atk: 6, hp: 6, keywords: ["lifesteal"], rarity: "legendary", set: "flame", text: "吸血。戦場に出た時: 自分に5回復", battlecry: { type: "heal", value: 5, target: "self_face" } },
+  ],
+  abyss: [
+    // common
+    { id: "ab_c1", name: "小悪魔", emoji: "👹", cost: 1, type: "minion", atk: 1, hp: 2, keywords: [], rarity: "common", set: "abyss", text: "戦場に出た時: 自分に1ダメージを与え、カードを1枚引く", battlecry: { type: "self_damage_draw", damage: 1, draw: 1, target: "none" } },
+    { id: "ab_c2", name: "契約の使者", emoji: "🖤", cost: 2, type: "minion", atk: 2, hp: 3, keywords: [], rarity: "common", set: "abyss", text: "戦場に出た時: 敵に1ダメージ", battlecry: { type: "damage", value: 1, target: "enemy_face" } },
+    { id: "ab_c3", name: "闇のインプ群", emoji: "👹", cost: 2, type: "spell", rarity: "common", set: "abyss", text: "1/1の小悪魔を2体呼び出す", effect: { type: "summon_token", token: "imp_token", count: 2, target: "none" } },
+    { id: "ab_c4", name: "呪縛の鎖", emoji: "⛓️", cost: 2, type: "spell", rarity: "common", set: "abyss", text: "対象に3ダメージ", effect: { type: "damage", value: 3, target: "select" } },
+    { id: "ab_c5", name: "影の番兵", emoji: "🗿", cost: 3, type: "minion", atk: 1, hp: 6, keywords: ["taunt"], rarity: "common", set: "abyss", text: "挑発" },
+    { id: "ab_c6", name: "魂喰らいの犬", emoji: "🐕‍🦺", cost: 3, type: "minion", atk: 3, hp: 2, keywords: ["lifesteal"], rarity: "common", set: "abyss", text: "吸血" },
+    { id: "ab_c7", name: "闇の囁き", emoji: "🌑", cost: 3, type: "spell", rarity: "common", set: "abyss", text: "対象を6回復", effect: { type: "heal", value: 6, target: "select" } },
+    { id: "ab_c8", name: "地獄の番犬", emoji: "🐺", cost: 4, type: "minion", atk: 4, hp: 5, keywords: ["taunt"], rarity: "common", set: "abyss", text: "挑発" },
+    // rare
+    { id: "ab_r1", name: "血の契約者", emoji: "🩸", cost: 4, type: "minion", atk: 3, hp: 5, keywords: ["taunt"], rarity: "rare", set: "abyss", text: "挑発。戦場に出た時: 自分に2ダメージを与え、カードを2枚引く", battlecry: { type: "self_damage_draw", damage: 2, draw: 2, target: "none" } },
+    { id: "ab_r2", name: "地獄の業火", emoji: "🔥", cost: 5, type: "spell", rarity: "rare", set: "abyss", text: "敵ミニオン全体に3ダメージ", effect: { type: "damage_all_enemy", value: 3, target: "none" } },
+    { id: "ab_r3", name: "彷徨う魂", emoji: "👻", cost: 3, type: "minion", atk: 2, hp: 2, keywords: ["taunt", "lifesteal"], rarity: "rare", set: "abyss", text: "挑発・吸血" },
+    { id: "ab_r4", name: "堕天の巨兵", emoji: "🗿", cost: 6, type: "minion", atk: 5, hp: 7, keywords: ["taunt"], rarity: "rare", set: "abyss", text: "挑発。戦場に出た時: 自分に2ダメージを与え、カードを1枚引く", battlecry: { type: "self_damage_draw", damage: 2, draw: 1, target: "none" } },
+    { id: "ab_r5", name: "闇の一撃", emoji: "🗡️", cost: 4, type: "spell", rarity: "rare", set: "abyss", text: "対象に5ダメージ", effect: { type: "damage", value: 5, target: "select" } },
+    { id: "ab_r6", name: "深淵の使者", emoji: "😈", cost: 5, type: "minion", atk: 4, hp: 5, keywords: ["lifesteal"], rarity: "rare", set: "abyss", text: "吸血。戦場に出た時: 敵に2ダメージ", battlecry: { type: "damage", value: 2, target: "enemy_face" } },
+    // epic
+    { id: "ab_e1", name: "地獄の使い魔統率者", emoji: "👺", cost: 4, type: "minion", atk: 3, hp: 3, keywords: [], rarity: "epic", set: "abyss", text: "戦場に出た時: 1/1の小悪魔を3体呼び出す", battlecry: { type: "summon_token", token: "imp_token", count: 3, target: "none" } },
+    { id: "ab_e2", name: "堕落の嵐", emoji: "🌪️", cost: 6, type: "spell", rarity: "epic", set: "abyss", text: "敵ミニオン全体に5ダメージ", effect: { type: "damage_all_enemy", value: 5, target: "none" } },
+    { id: "ab_e3", name: "深淵の恐怖", emoji: "👹", cost: 7, type: "minion", atk: 6, hp: 8, keywords: ["taunt", "lifesteal"], rarity: "epic", set: "abyss", text: "挑発・吸血" },
+    { id: "ab_e4", name: "魂を喰らう者", emoji: "💀", cost: 5, type: "minion", atk: 4, hp: 4, keywords: [], rarity: "epic", set: "abyss", text: "戦場に出た時: 自分に2ダメージを与え、カードを2枚引く", battlecry: { type: "self_damage_draw", damage: 2, draw: 2, target: "none" } },
+    // legendary
+    { id: "ab_l1", name: "深淵の魔王ザガレス", emoji: "😈", cost: 8, type: "minion", atk: 7, hp: 7, keywords: ["lifesteal"], rarity: "legendary", set: "abyss", text: "吸血。戦場に出た時: 自分に3ダメージを与えてカードを3枚引き、自身を除くすべてのモンスターに3ダメージ", battlecry: { type: "pact_nuke", selfDamage: 3, draw: 3, boardDamage: 3, target: "none" } },
+    { id: "ab_l2", name: "業魔の門番モラクス", emoji: "👹", cost: 7, type: "minion", atk: 6, hp: 7, keywords: ["taunt"], rarity: "legendary", set: "abyss", text: "挑発。戦場に出た時: 相手の手札をランダムに2枚捨てさせる", battlecry: { type: "discard_random_enemy", count: 2, target: "none" } },
   ],
 };
 

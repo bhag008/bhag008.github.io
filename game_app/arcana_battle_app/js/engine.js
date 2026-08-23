@@ -119,7 +119,7 @@ export function checkWin(game) {
 
 // -------------------- 効果解決 --------------------
 // target: null | {type:"face", side} | {type:"minion", side, uid}
-export function resolveEffect(game, side, effect, target) {
+export function resolveEffect(game, side, effect, target, sourceUid) {
   const enemy = opponentOf(side);
   switch (effect.type) {
     case "damage": {
@@ -145,6 +145,34 @@ export function resolveEffect(game, side, effect, target) {
     case "summon_token": {
       for (let i = 0; i < effect.count; i++) {
         summonToken(game, side, effect.token);
+      }
+      break;
+    }
+    case "self_damage_draw": {
+      applyDamage(game, { type: "face", side }, effect.damage);
+      for (let i = 0; i < effect.draw; i++) drawCard(game, side);
+      break;
+    }
+    case "pact_nuke": {
+      applyDamage(game, { type: "face", side }, effect.selfDamage);
+      for (let i = 0; i < effect.draw; i++) drawCard(game, side);
+      for (const m of [...game.players[side].board]) {
+        if (m.uid === sourceUid) continue;
+        applyDamage(game, { type: "minion", side, uid: m.uid }, effect.boardDamage);
+      }
+      for (const m of [...game.players[enemy].board]) {
+        applyDamage(game, { type: "minion", side: enemy, uid: m.uid }, effect.boardDamage);
+      }
+      break;
+    }
+    case "discard_random_enemy": {
+      const enemyHand = game.players[enemy].hand;
+      const count = Math.min(effect.count, enemyHand.length);
+      for (let i = 0; i < count; i++) {
+        const idx = Math.floor(Math.random() * enemyHand.length);
+        const [removed] = enemyHand.splice(idx, 1);
+        const card = getCard(removed.cardId);
+        addLog(game, `${enemy === "player" ? "あなた" : "相手"}は「${card?.name || "カード"}」を手札から捨てた`);
       }
       break;
     }
@@ -258,7 +286,7 @@ export function playCard(game, side, handUid, target) {
     p.board.push(minion);
     addLog(game, `${side === "player" ? "あなた" : "相手"}が「${card.name}」を場に出した`);
     if (card.battlecry) {
-      resolveEffect(game, side, card.battlecry, target);
+      resolveEffect(game, side, card.battlecry, target, minion.uid);
     }
   } else {
     addLog(game, `${side === "player" ? "あなた" : "相手"}が「${card.name}」を使用した`);

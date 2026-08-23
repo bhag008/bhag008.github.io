@@ -8,32 +8,37 @@ export function render(container, ctx) {
 }
 
 function renderShopView(container, ctx) {
-  const exp = EXPANSIONS.flame;
   container.innerHTML = `
     <section class="deck-header">
       <h2>パックショップ</h2>
       <div class="gold-chip">💰 ${getGold()}</div>
     </section>
+    <div class="pack-list" id="packList"></div>
+  `;
 
-    <div class="pack-card">
-      <div class="pack-emoji">🔥📦</div>
+  const list = container.querySelector("#packList");
+  for (const exp of Object.values(EXPANSIONS)) {
+    const card = document.createElement("div");
+    card.className = "pack-card";
+    card.innerHTML = `
+      <div class="pack-emoji">${exp.packEmoji}</div>
       <div class="pack-name">${exp.name}</div>
       <p class="pack-desc">${exp.description}</p>
       <p class="pack-odds">1パック${exp.cardsPerPack}枚 / コモン70% レア22% エピック6% レジェンダリー2%（レア以上1枚確定）</p>
-      <button id="buyPackBtn" class="primary-btn">パックを購入（${exp.packCost}G）</button>
-    </div>
-  `;
-
-  container.querySelector("#buyPackBtn").addEventListener("click", () => {
-    if (!spendGold(exp.packCost)) {
-      ctx.toast("ゴールドが足りません");
-      return;
-    }
-    ctx.refreshGold();
-    const cards = openPack("flame");
-    addCardsToCollection(cards.map((c) => c.id));
-    renderReveal(container, ctx, cards);
-  });
+      <button class="primary-btn buy-pack-btn">パックを購入（${exp.packCost}G）</button>
+    `;
+    card.querySelector(".buy-pack-btn").addEventListener("click", () => {
+      if (!spendGold(exp.packCost)) {
+        ctx.toast("ゴールドが足りません");
+        return;
+      }
+      ctx.refreshGold();
+      const cards = openPack(exp.id);
+      addCardsToCollection(cards.map((c) => c.id));
+      renderReveal(container, ctx, cards);
+    });
+    list.appendChild(card);
+  }
 }
 
 function renderReveal(container, ctx, cards) {

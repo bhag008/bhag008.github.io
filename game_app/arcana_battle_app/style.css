@@ -370,6 +370,12 @@ button {
 }
 
 /* ---------- パックショップ ---------- */
+.pack-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .pack-card {
   background: var(--bg-elevated);
   border-radius: 20px;

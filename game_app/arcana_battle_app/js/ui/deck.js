@@ -1,4 +1,4 @@
-import { allCollectibleCards, getCard } from "../cards.js";
+import { allCollectibleCards, getCard, EXPANSIONS } from "../cards.js";
 import { getDeck, setDeck, ownedCount, validateDeck, DECK_SIZE, MAX_COPIES } from "../state.js";
 import { createCardEl } from "./cardView.js";
 
@@ -46,7 +46,7 @@ function renderAll(container, ctx) {
     <div class="filter-tabs">
       <button class="tab-btn" data-set="all">すべて</button>
       <button class="tab-btn" data-set="standard">スタンダード</button>
-      <button class="tab-btn" data-set="flame">焔の書</button>
+      ${Object.values(EXPANSIONS).map((exp) => `<button class="tab-btn" data-set="${exp.id}">${exp.name}</button>`).join("")}
     </div>
 
     <div class="card-grid" id="poolGrid"></div>
