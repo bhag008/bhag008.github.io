@@ -24,6 +24,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8126", "--directory", "game_app/mahjong_solo_app"],
       "port": 8126
+    },
+    {
+      "name": "game_hub",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8127", "--directory", "game_app"],
+      "port": 8127
     }
   ]
 }

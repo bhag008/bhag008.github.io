@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>ゲーム一覧</title>
+<meta name="theme-color" content="#0f1220">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0f1220;
+    --bg-elevated: #1a1e33;
+    --card: #20264a;
+    --accent: #5ee0c0;
+    --text: #f2f3f8;
+    --text-dim: #9aa0bd;
+    --radius: 16px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .app {
+    max-width: 560px;
+    margin: 0 auto;
+    min-height: 100dvh;
+    padding: calc(20px + var(--safe-top)) 16px calc(20px + var(--safe-bottom));
+  }
+  header { text-align: center; margin-bottom: 22px; }
+  header h1 { font-size: 22px; margin: 0 0 6px; letter-spacing: 0.02em; }
+  header p { color: var(--text-dim); font-size: 13.5px; margin: 0; }
+  .game-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .game-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 16px;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .game-card:active { transform: scale(0.98); }
+  .game-icon {
+    font-size: 30px;
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    background: var(--bg-elevated);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .game-info { flex: 1; min-width: 0; }
+  .game-info h2 { font-size: 16px; margin: 0 0 4px; }
+  .game-info p { font-size: 12.5px; color: var(--text-dim); margin: 0; line-height: 1.5; }
+  .game-arrow { color: var(--text-dim); font-size: 18px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>ゲーム一覧</h1>
+    <p>好きなゲームを選んでください</p>
+  </header>
+  <ul class="game-list">
+    <li>
+      <a class="game-card" href="mahjong_solo_app/">
+        <span class="game-icon">🀄</span>
+        <span class="game-info">
+          <h2>一人麻雀 スコアクイズ</h2>
+          <p>ツモ和了を目指し、あがり点を4択で当てるひとり麻雀</p>
+        </span>
+        <span class="game-arrow">›</span>
+      </a>
+    </li>
+    <li>
+      <a class="game-card" href="arcana_battle_app/">
+        <span class="game-icon">🃏</span>
+        <span class="game-info">
+          <h2>アルカナバトル</h2>
+          <p>デッキを育てて戦うひとり用TCG風バトルゲーム</p>
+        </span>
+        <span class="game-arrow">›</span>
+      </a>
+    </li>
+    <li>
+      <a class="game-card" href="make10_app/">
+        <span class="game-icon">🔢</span>
+        <span class="game-info">
+          <h2>Make10</h2>
+          <p>4つの数字と四則演算で10を作るパズルゲーム</p>
+        </span>
+        <span class="game-arrow">›</span>
+      </a>
+    </li>
+    <li>
+      <a class="game-card" href="hit_and_blow_app/">
+        <span class="game-icon">🎯</span>
+        <span class="game-info">
+          <h2>ヒット＆ブロー</h2>
+          <p>隠された数字を推理して当てる定番パズル</p>
+        </span>
+        <span class="game-arrow">›</span>
+      </a>
+    </li>
+  </ul>
+</div>
+</body>
+</html>
