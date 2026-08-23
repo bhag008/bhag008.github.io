@@ -2,6 +2,7 @@ import { getGold } from "./state.js";
 import * as HomeScreen from "./ui/home.js";
 import * as DeckScreen from "./ui/deck.js";
 import * as ShopScreen from "./ui/shop.js";
+import * as OpponentSelectScreen from "./ui/opponentSelect.js";
 import * as BattleScreen from "./ui/battle.js";
 
 const screenEl = document.getElementById("screen");
@@ -13,6 +14,7 @@ const SCREENS = {
   home: HomeScreen,
   deck: DeckScreen,
   shop: ShopScreen,
+  opponents: OpponentSelectScreen,
   battle: BattleScreen,
 };
 

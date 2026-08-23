@@ -43,7 +43,7 @@ export function render(container, ctx) {
     });
   }
 
-  container.querySelector("#navBattle").addEventListener("click", () => ctx.navigate("battle"));
+  container.querySelector("#navBattle").addEventListener("click", () => ctx.navigate("opponents"));
   container.querySelector("#navDeck").addEventListener("click", () => ctx.navigate("deck"));
   container.querySelector("#navShop").addEventListener("click", () => ctx.navigate("shop"));
 }

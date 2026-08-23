@@ -24,7 +24,9 @@ function chooseSpellTarget(game, side, effect) {
   return { type: "face", side: enemy };
 }
 
-function playCpuCards(game, side) {
+// 1回分の行動（カードプレイ・攻撃）ごとに、その間に追加されたログ行を添えてyieldする。
+// battle.js側はこれを1ステップずつ受け取り、演出（再描画・待機）を挟みながら消費する。
+function* playCpuCardsSteps(game, side) {
   const p = game.players[side];
   let playedSomething = true;
   while (playedSomething) {
@@ -40,14 +42,16 @@ function playCpuCards(game, side) {
       const effect = card.type === "minion" ? card.battlecry : card.effect;
       target = chooseSpellTarget(game, side, effect);
     }
+    const before = game.log.length;
     if (playCard(game, side, h.uid, target)) {
       playedSomething = true;
+      yield { lines: game.log.slice(before) };
     }
     if (game.winner) return;
   }
 }
 
-function cpuAttackPhase(game, side) {
+function* cpuAttackPhaseSteps(game, side) {
   const enemy = side === "player" ? "cpu" : "player";
   let acted = true;
   while (acted) {
@@ -61,73 +65,80 @@ function cpuAttackPhase(game, side) {
 
       const faceTarget = targets.find((t) => t.type === "face");
       const minionTargets = targets.filter((t) => t.type === "minion");
+      let chosen = null;
 
       // 勝てる場合は顔を殴ってリーサルを狙う
       if (faceTarget) {
         const enemyFace = game.players[enemy].face;
         const totalAtk = attackers.filter((a) => !a.attacked).reduce((s, a) => s + a.atk, 0);
-        if (totalAtk >= enemyFace.hp) {
-          declareAttack(game, side, attacker.uid, faceTarget);
-          acted = true;
-          continue;
-        }
+        if (totalAtk >= enemyFace.hp) chosen = faceTarget;
       }
 
       // 良いトレード（相手を倒せて自分は生き残る）を探す
-      let bestTrade = null;
-      for (const t of minionTargets) {
-        const defender = game.players[enemy].board.find((m) => m.uid === t.uid);
-        if (!defender) continue;
-        const canKill = attacker.atk >= defender.hp;
-        const survives = defender.atk < attacker.hp;
-        if (canKill && survives) {
-          if (!bestTrade || defender.atk > bestTrade.defenderAtk) {
-            bestTrade = { target: t, defenderAtk: defender.atk };
+      if (!chosen) {
+        let bestTrade = null;
+        for (const t of minionTargets) {
+          const defender = game.players[enemy].board.find((m) => m.uid === t.uid);
+          if (!defender) continue;
+          const canKill = attacker.atk >= defender.hp;
+          const survives = defender.atk < attacker.hp;
+          if (canKill && survives) {
+            if (!bestTrade || defender.atk > bestTrade.defenderAtk) {
+              bestTrade = { target: t, defenderAtk: defender.atk };
+            }
           }
         }
-      }
-      if (bestTrade) {
-        declareAttack(game, side, attacker.uid, bestTrade.target);
-        acted = true;
-        continue;
+        if (bestTrade) chosen = bestTrade.target;
       }
 
-      // 相手を倒せるなら相打きでも脅威を除去
-      let bestKill = null;
-      for (const t of minionTargets) {
-        const defender = game.players[enemy].board.find((m) => m.uid === t.uid);
-        if (!defender) continue;
-        if (attacker.atk >= defender.hp) {
-          if (!bestKill || defender.atk > bestKill.defenderAtk) {
-            bestKill = { target: t, defenderAtk: defender.atk };
+      // 相手を倒せるなら相打ちでも脅威を除去
+      if (!chosen) {
+        let bestKill = null;
+        for (const t of minionTargets) {
+          const defender = game.players[enemy].board.find((m) => m.uid === t.uid);
+          if (!defender) continue;
+          if (attacker.atk >= defender.hp) {
+            if (!bestKill || defender.atk > bestKill.defenderAtk) {
+              bestKill = { target: t, defenderAtk: defender.atk };
+            }
           }
         }
-      }
-      if (bestKill) {
-        declareAttack(game, side, attacker.uid, bestKill.target);
-        acted = true;
-        continue;
+        if (bestKill) chosen = bestKill.target;
       }
 
       // 顔を殴れるなら殴る、挑発しかなければ最もHPが低い挑発を殴る
-      if (faceTarget) {
-        declareAttack(game, side, attacker.uid, faceTarget);
+      if (!chosen) {
+        if (faceTarget) {
+          chosen = faceTarget;
+        } else if (minionTargets.length) {
+          chosen = [...minionTargets].sort((a, b) => {
+            const da = game.players[enemy].board.find((m) => m.uid === a.uid);
+            const db = game.players[enemy].board.find((m) => m.uid === b.uid);
+            return (da?.hp ?? 0) - (db?.hp ?? 0);
+          })[0];
+        }
+      }
+
+      if (chosen) {
+        const before = game.log.length;
+        declareAttack(game, side, attacker.uid, chosen);
         acted = true;
-      } else if (minionTargets.length) {
-        const weakest = [...minionTargets].sort((a, b) => {
-          const da = game.players[enemy].board.find((m) => m.uid === a.uid);
-          const db = game.players[enemy].board.find((m) => m.uid === b.uid);
-          return (da?.hp ?? 0) - (db?.hp ?? 0);
-        })[0];
-        declareAttack(game, side, attacker.uid, weakest);
-        acted = true;
+        yield { lines: game.log.slice(before) };
       }
     }
   }
 }
 
-export function runCpuTurn(game) {
-  playCpuCards(game, "cpu");
+// CPUターンを1アクションずつ進めるジェネレーター。
+export function* runCpuTurnSteps(game) {
+  yield* playCpuCardsSteps(game, "cpu");
   if (game.winner) return;
-  cpuAttackPhase(game, "cpu");
+  yield* cpuAttackPhaseSteps(game, "cpu");
+}
+
+// 演出なしで即座にCPUターンを解決する（従来互換のショートカット）。
+export function runCpuTurn(game) {
+  for (const _ of runCpuTurnSteps(game)) {
+    // 何もしない: ジェネレーターを最後まで回すだけ
+  }
 }
