@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "make10",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8123", "--directory", "game_app/make10_app"],
+      "port": 8123
+    },
+    {
+      "name": "hit_and_blow",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8124", "--directory", "game_app/hit_and_blow_app"],
+      "port": 8124
+    },
+    {
+      "name": "arcana_battle",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8125", "--directory", "game_app/arcana_battle_app"],
+      "port": 8125
+    },
+    {
+      "name": "mahjong_solo",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8126", "--directory", "game_app/mahjong_solo_app"],
+      "port": 8126
+    }
+  ]
+}
