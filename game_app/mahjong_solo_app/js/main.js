@@ -1,4 +1,4 @@
-import { createGame, startGame, declareTsumo, answerQuiz, declareRiichi, cancelRiichiChoice, discardTile, nextRound, endGameNow } from "./game.js";
+import { createGame, startGame, declareTsumo, submitYakuGuess, toggleYakuSelection, answerScoreQuiz, declareRiichi, cancelRiichiPending, discardTile, nextRound, endGameNow } from "./game.js";
 import { render } from "./ui.js";
 
 const root = document.getElementById("screen");
@@ -22,13 +22,19 @@ root.addEventListener("click", (e) => {
       declareRiichi(state);
       break;
     case "cancel-riichi":
-      cancelRiichiChoice(state);
+      cancelRiichiPending(state);
       break;
     case "tsumo":
       declareTsumo(state);
       break;
-    case "answer":
-      answerQuiz(state, Number(btn.dataset.value));
+    case "toggle-yaku":
+      toggleYakuSelection(state, btn.dataset.name);
+      break;
+    case "submit-yaku":
+      submitYakuGuess(state);
+      break;
+    case "answer-score":
+      answerScoreQuiz(state, Number(btn.dataset.value));
       break;
     case "next":
       nextRound(state);

@@ -92,7 +92,6 @@ function evaluateStandardDecomposition(decomposition, winKind, hand14, ctx) {
     // 役判定
     yakuList.push({ name: "門前清自摸和", han: 1 });
     if (ctx.isRiichi) yakuList.push({ name: "立直", han: 1 });
-    if (ctx.isIppatsu) yakuList.push({ name: "一発", han: 1 });
     if (ctx.isHaitei) yakuList.push({ name: "海底摸月", han: 1 });
     if (isPinfu) yakuList.push({ name: "平和", han: 1 });
 
@@ -161,12 +160,8 @@ function evaluateStandardDecomposition(decomposition, winKind, hand14, ctx) {
 function buildResult(yakuList, fu, ctx, hand14) {
   let han = yakuList.reduce((s, y) => s + y.han, 0);
   const doraHan = ctx.doraKinds.reduce((s, dk) => s + hand14.filter(k => k === dk).length, 0);
-  const uraDoraHan = ctx.isRiichi ? ctx.uraDoraKinds.reduce((s, dk) => s + hand14.filter(k => k === dk).length, 0) : 0;
-  const akaHan = ctx.akaCount || 0;
   if (doraHan > 0) yakuList.push({ name: "ドラ", han: doraHan });
-  if (uraDoraHan > 0) yakuList.push({ name: "裏ドラ", han: uraDoraHan });
-  if (akaHan > 0) yakuList.push({ name: "赤ドラ", han: akaHan });
-  han += doraHan + uraDoraHan + akaHan;
+  han += doraHan;
   return { yakuList, han, fu, isYakuman: false, yakumanPower: 0 };
 }
 
@@ -240,7 +235,6 @@ function checkYakuman(hand14, counts, decompositions, winKind, ctx) {
 function evaluateChiitoitsu(hand14, ctx) {
   const yakuList = [{ name: "門前清自摸和", han: 1 }, { name: "七対子", han: 2 }];
   if (ctx.isRiichi) yakuList.push({ name: "立直", han: 1 });
-  if (ctx.isIppatsu) yakuList.push({ name: "一発", han: 1 });
   if (ctx.isHaitei) yakuList.push({ name: "海底摸月", han: 1 });
   const allSimple = hand14.every(k => !isTerminalOrHonor(k));
   if (allSimple) yakuList.push({ name: "断幺九", han: 1 });
@@ -256,7 +250,7 @@ function evaluateChiitoitsu(hand14, ctx) {
 }
 
 // メイン: 14枚の手牌(kind配列) + 和了牌kind + コンテキストから最高得点の役構成を返す
-// ctx = { isRiichi, isIppatsu, isHaitei, roundWind, seatWind, doraKinds:[kind], uraDoraKinds:[kind], akaCount }
+// ctx = { isRiichi, isHaitei, roundWind, seatWind, doraKinds:[kind] }
 export function evaluateWin(hand14Kinds, winKind, ctx) {
   const counts = countsOfKinds(hand14Kinds);
   const candidates = [];
@@ -273,7 +267,7 @@ export function evaluateWin(hand14Kinds, winKind, ctx) {
   if (candidates.length === 0) return null;
 
   const yakumanCandidates = candidates.filter(c => c.isYakuman);
-  const pool = yakumanCandidates.length > 0 ? yakumanCandidates : candidates.filter(c => c.yakuList.some(y => y.name !== "ドラ" && y.name !== "裏ドラ" && y.name !== "赤ドラ"));
+  const pool = yakumanCandidates.length > 0 ? yakumanCandidates : candidates.filter(c => c.yakuList.some(y => y.name !== "ドラ"));
   if (pool.length === 0) return null;
 
   let best = null;
@@ -282,6 +276,32 @@ export function evaluateWin(hand14Kinds, winKind, ctx) {
     if (!best || scored.score.total > best.score.total) best = scored;
   }
   return best;
+}
+
+// 役当てクイズ用の全候補（翻数ごとにまとめた表示順）
+export const YAKU_QUIZ_GROUPS = [
+  { label: "1翻", names: ["門前清自摸和", "立直", "海底摸月", "平和", "断幺九", "一盃口", "役牌(白)", "役牌(發)", "役牌(中)", "ダブル東"] },
+  { label: "2翻", names: ["二盃口", "三色同順", "三色同刻", "一気通貫", "混全帯幺九", "対々和", "三暗刻", "混老頭", "小三元", "七対子"] },
+  { label: "3翻", names: ["純全帯幺九", "混一色"] },
+  { label: "6翻", names: ["清一色"] },
+  { label: "役満", names: ["国士無双", "四暗刻", "大三元", "小四喜", "大四喜", "字一色", "清老頭", "緑一色", "九蓮宝燈"] },
+];
+
+const YAKU_NAME_NORMALIZE = {
+  "国士無双十三面待ち": "国士無双",
+  "四暗刻単騎": "四暗刻",
+  "純正九蓮宝燈": "九蓮宝燈",
+};
+const NON_YAKU_NAMES = new Set(["ドラ"]);
+
+// 実際の役一覧から、クイズで正誤判定に使う「役名の集合」を取り出す（ドラ類は除外し、異名同役はまとめる）
+export function actualYakuQuizNames(yakuList) {
+  const set = new Set();
+  for (const y of yakuList) {
+    if (NON_YAKU_NAMES.has(y.name)) continue;
+    set.add(YAKU_NAME_NORMALIZE[y.name] || y.name);
+  }
+  return [...set];
 }
 
 export function computeScoreFromHanFu({ han, fu, isYakuman, yakumanPower }) {

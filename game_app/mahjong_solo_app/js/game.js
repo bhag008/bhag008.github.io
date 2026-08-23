@@ -1,10 +1,23 @@
-import { buildShuffledWall, sortHand, nextKind, EAST } from "./tiles.js";
+import { buildShuffledWall, sortHand, nextKind, EAST, SOUTH } from "./tiles.js";
 import { getWaits, isWinningHand } from "./agari.js";
-import { evaluateWin } from "./yaku.js";
+import { evaluateWin, actualYakuQuizNames } from "./yaku.js";
 import { buildQuizChoices } from "./quiz.js";
 
 const DEAD_WALL_SIZE = 14; // 136 - 13(配牌) - 14(王牌) = 109枚がツモ可能
 const MAX_PENALTY = 3;
+
+// 東1局〜南4局の半荘固定。5局目から場風が南に変わる。
+const KYOKU_INFO = [
+  { label: "東1局", wind: EAST },
+  { label: "東2局", wind: EAST },
+  { label: "東3局", wind: EAST },
+  { label: "東4局", wind: EAST },
+  { label: "南1局", wind: SOUTH },
+  { label: "南2局", wind: SOUTH },
+  { label: "南3局", wind: SOUTH },
+  { label: "南4局", wind: SOUTH },
+];
+export const TOTAL_KYOKU = KYOKU_INFO.length;
 
 export function createGame() {
   const state = {
@@ -14,7 +27,7 @@ export function createGame() {
     history: [],
     gameOver: false,
     round: null,
-    phase: "before_start", // before_start | playing | round_result | game_over
+    phase: "before_start", // before_start | playing | yaku_quiz | score_quiz | round_result | game_over
     lastEvent: null, // 直近の見逃しペナルティ通知など、UIへの一時メッセージ
   };
   return state;
@@ -28,23 +41,23 @@ function dealRound(state) {
   const liveWall = rest.slice(0, rest.length - DEAD_WALL_SIZE);
 
   state.roundNumber++;
+  const kyoku = KYOKU_INFO[state.roundNumber - 1];
   state.round = {
+    kyokuLabel: kyoku.label,
+    roundWind: kyoku.wind,
     hand,
     drawnTile: null,
     liveWall,
     wallIndex: 0,
     doraIndicatorTile: deadWall[0],
-    uraDoraIndicatorTile: deadWall[1],
     discards: [],
     isRiichi: false,
-    riichiDeclaredAtDrawCount: null,
+    riichiPending: false,
     drawCount: 0,
-    canTsumo: false,
-    canRiichi: false,
-    riichiChoiceMode: false,
-    riichiValidDiscardKinds: [],
+    canTsumo: false, // 内部判定のみ。UIには出さない
+    pendingWinResult: null,
     missedWinsThisRound: 0,
-    pendingWin: null, // {result, choices, guess}
+    pendingWin: null, // {result, selectedYaku, yakuGuess, yakuCorrect, choices}
     ended: false,
   };
   state.phase = "playing";
@@ -68,28 +81,22 @@ function liveWallRemaining(round) {
 function currentDoraKinds(round) {
   return [nextKind(round.doraIndicatorTile.kind)];
 }
-function currentUraDoraKinds(round) {
-  return [nextKind(round.uraDoraIndicatorTile.kind)];
-}
 
 function buildContext(state, isHaitei) {
   const round = state.round;
   return {
     isRiichi: round.isRiichi,
-    isIppatsu: round.isRiichi && round.drawCount === round.riichiDeclaredAtDrawCount + 1,
     isHaitei,
-    roundWind: EAST,
+    roundWind: round.roundWind,
     seatWind: EAST,
     doraKinds: currentDoraKinds(round),
-    uraDoraKinds: currentUraDoraKinds(round),
-    akaCount: [...round.hand, round.drawnTile].filter(t => t && t.red).length,
   };
 }
 
 function drawTile(state) {
   const round = state.round;
   if (liveWallRemaining(round) <= 0) {
-    endRoundExhaustive(state);
+    endRoundNonWin(state, "exhaustive");
     return;
   }
   const tile = round.liveWall[round.wallIndex++];
@@ -102,96 +109,135 @@ function drawTile(state) {
   const winResult = isWinningHand(fullKinds) ? evaluateWin(fullKinds, tile.kind, ctx) : null;
   round.canTsumo = !!winResult;
   round.pendingWinResult = winResult;
-
-  round.riichiChoiceMode = false;
-  if (round.isRiichi || round.canTsumo) {
-    round.canRiichi = false;
-    round.riichiValidDiscardKinds = [];
-  } else {
-    const discardOptions = [...round.hand, tile];
-    const validRiichiDiscards = [];
-    for (let i = 0; i < discardOptions.length; i++) {
-      const remain = discardOptions.filter((_, idx) => idx !== i).map(t => t.kind);
-      if (getWaits(remain).length > 0) validRiichiDiscards.push(discardOptions[i].uid);
-    }
-    round.canRiichi = validRiichiDiscards.length > 0 && liveWallRemaining(round) > 0;
-    round.riichiValidDiscardKinds = validRiichiDiscards;
-  }
 }
 
-// ツモを宣言。役無しでは呼ばれない前提（UI側でcanTsumo時のみ表示）
+function applyPenalty(state) {
+  state.penaltyCount++;
+  return state.penaltyCount >= MAX_PENALTY;
+}
+
+// 局を終了する。ペナルティによるゲームオーバー、または半荘(南4局)終了ならゲーム自体も終了する。
+function endRound(state, forceGameOver) {
+  state.round.ended = true;
+  if (forceGameOver || state.roundNumber >= TOTAL_KYOKU) state.gameOver = true;
+  state.phase = "round_result";
+}
+
+// 手牌+ツモ牌が実際に和了形かどうかに関わらず呼べる。誤ったツモ宣言はペナルティで局を打ち切る。
 export function declareTsumo(state) {
   if (state.phase !== "playing") return;
   const round = state.round;
-  if (!round.canTsumo || !round.pendingWinResult) return;
-  const result = round.pendingWinResult;
-  const choices = buildQuizChoices(result);
-  round.pendingWin = { result, choices, guess: null };
-  state.phase = "quiz";
+  if (!round.canTsumo || !round.pendingWinResult) {
+    state.lastEvent = { type: "wrong_tsumo", message: "その手牌ではツモできません。誤ったツモ宣言でペナルティ +1" };
+    const gameOverNow = applyPenalty(state);
+    pushNonWinHistory(state, "wrong_tsumo", gameOverNow);
+    endRound(state, gameOverNow);
+    return;
+  }
+  round.pendingWin = { result: round.pendingWinResult, selectedYaku: [], yakuGuess: null, yakuCorrect: null, choices: null };
+  state.phase = "yaku_quiz";
 }
 
-export function answerQuiz(state, guessedScore) {
-  if (state.phase !== "quiz") return;
+export function toggleYakuSelection(state, name) {
+  if (state.phase !== "yaku_quiz") return;
+  const pw = state.round.pendingWin;
+  if (!pw) return;
+  const idx = pw.selectedYaku.indexOf(name);
+  if (idx === -1) pw.selectedYaku.push(name);
+  else pw.selectedYaku.splice(idx, 1);
+}
+
+// 役当てクイズの回答。選択が実際の役と完全一致していなければ0点で局終了。
+export function submitYakuGuess(state) {
+  if (state.phase !== "yaku_quiz") return;
   const round = state.round;
   const pw = round.pendingWin;
   if (!pw) return;
-  const correct = guessedScore === pw.result.score.total;
-  if (correct) state.totalScore += pw.result.score.total;
+  const selectedNames = pw.selectedYaku;
+
+  const actual = actualYakuQuizNames(pw.result.yakuList);
+  const guessSet = new Set(selectedNames);
+  const actualSet = new Set(actual);
+  const correct = guessSet.size === actualSet.size && [...guessSet].every(n => actualSet.has(n));
+
+  pw.yakuGuess = selectedNames;
+  pw.yakuCorrect = correct;
+
+  if (!correct) {
+    finalizeWinRound(state, { guessScore: null, scoreCorrect: null, addedScore: 0 });
+    return;
+  }
+  pw.choices = buildQuizChoices(pw.result);
+  state.phase = "score_quiz";
+}
+
+export function answerScoreQuiz(state, guessedScore) {
+  if (state.phase !== "score_quiz") return;
+  const round = state.round;
+  const pw = round.pendingWin;
+  if (!pw) return;
+  const scoreCorrect = guessedScore === pw.result.score.total;
+  const addedScore = scoreCorrect ? pw.result.score.total : 0;
+  finalizeWinRound(state, { guessScore: guessedScore, scoreCorrect, addedScore });
+}
+
+function finalizeWinRound(state, { guessScore, scoreCorrect, addedScore }) {
+  const round = state.round;
+  const pw = round.pendingWin;
+  state.totalScore += addedScore;
 
   const finalHand = sortHand([...round.hand, round.drawnTile]);
   state.history.push({
+    endReason: "win",
     roundNumber: state.roundNumber,
+    kyokuLabel: round.kyokuLabel,
     won: true,
     finalHand,
     winKind: round.drawnTile.kind,
     yakuList: pw.result.yakuList,
+    actualYakuNames: actualYakuQuizNames(pw.result.yakuList),
+    guessedYakuNames: pw.yakuGuess,
+    yakuCorrect: pw.yakuCorrect,
     han: pw.result.han,
     fu: pw.result.fu,
     isYakuman: pw.result.isYakuman,
-    guessScore: guessedScore,
+    guessScore,
     actualScore: pw.result.score.total,
-    correct,
+    scoreCorrect,
+    addedScore,
     isRiichi: round.isRiichi,
     missedWinsThisRound: round.missedWinsThisRound,
   });
-  round.ended = true;
-  state.phase = "round_result";
+  endRound(state, false);
 }
 
+// リーチ宣言を試みる。実際にテンパイを保てる打牌をした場合のみ成立する。
 export function declareRiichi(state) {
   if (state.phase !== "playing") return;
   const round = state.round;
-  if (!round.canRiichi || round.isRiichi) return;
-  round.riichiChoiceMode = true;
+  if (round.isRiichi || round.riichiPending) return;
+  round.riichiPending = true;
 }
 
-export function cancelRiichiChoice(state) {
+export function cancelRiichiPending(state) {
   if (state.phase !== "playing") return;
-  state.round.riichiChoiceMode = false;
+  state.round.riichiPending = false;
 }
 
 // 牌を捨てる。tileUid は手牌+ツモ牌の中から選ぶ。見逃しペナルティもここで判定。
 export function discardTile(state, tileUid) {
   if (state.phase !== "playing") return;
   const round = state.round;
-  if (round.riichiChoiceMode && !round.riichiValidDiscardKinds.includes(tileUid)) return;
-  if (round.isRiichi && !round.riichiChoiceMode && tileUid !== round.drawnTile.uid) return;
+  if (round.isRiichi && !round.riichiPending && tileUid !== round.drawnTile.uid) return;
 
   const wasMiss = round.canTsumo;
   if (wasMiss) {
     round.missedWinsThisRound++;
-    state.penaltyCount++;
+    const gameOverNow = applyPenalty(state);
     state.lastEvent = { type: "missed_win", message: "上がりを見逃しました。ペナルティ +1" };
-    if (state.penaltyCount >= MAX_PENALTY) {
-      state.history.push({
-        roundNumber: state.roundNumber,
-        won: false,
-        finalHand: sortHand([...round.hand, round.drawnTile]),
-        missedWinsThisRound: round.missedWinsThisRound,
-        isRiichi: round.isRiichi,
-        cutShortByGameOver: true,
-      });
-      finalizeGameOver(state);
+    if (gameOverNow) {
+      pushNonWinHistory(state, "missed_win", true);
+      endRound(state, true);
       return;
     }
   } else {
@@ -208,34 +254,40 @@ export function discardTile(state, tileUid) {
   round.canTsumo = false;
   round.pendingWinResult = null;
 
-  if (round.riichiChoiceMode) {
-    round.isRiichi = true;
-    round.riichiDeclaredAtDrawCount = round.drawCount;
-    round.riichiChoiceMode = false;
-    round.canRiichi = false;
+  if (round.riichiPending) {
+    round.riichiPending = false;
+    const isActuallyTenpai = getWaits(round.hand.map(t => t.kind)).length > 0;
+    if (isActuallyTenpai) {
+      round.isRiichi = true;
+    } else {
+      state.lastEvent = { type: "wrong_riichi", message: "テンパイしていない手でリーチを宣言しました。ペナルティ +1" };
+      const gameOverNow = applyPenalty(state);
+      pushNonWinHistory(state, "wrong_riichi", gameOverNow);
+      endRound(state, gameOverNow);
+      return;
+    }
   }
 
   drawTile(state);
 }
 
-function endRoundExhaustive(state) {
+function pushNonWinHistory(state, endReason, causedGameOver) {
   const round = state.round;
   state.history.push({
+    endReason,
     roundNumber: state.roundNumber,
+    kyokuLabel: round.kyokuLabel,
     won: false,
-    finalHand: sortHand(round.hand),
+    finalHand: sortHand(round.drawnTile ? [...round.hand, round.drawnTile] : round.hand),
     missedWinsThisRound: round.missedWinsThisRound,
     isRiichi: round.isRiichi,
+    causedGameOver,
   });
-  round.ended = true;
-  state.phase = "round_result";
 }
 
-function finalizeGameOver(state) {
-  const round = state.round;
-  round.ended = true;
-  state.gameOver = true;
-  state.phase = "round_result";
+function endRoundNonWin(state, endReason) {
+  pushNonWinHistory(state, endReason, false);
+  endRound(state, false);
 }
 
 export function nextRound(state) {

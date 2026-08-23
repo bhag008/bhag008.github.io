@@ -64,21 +64,17 @@ export function nextKind(kind) {
 }
 
 let uid = 0;
-function makeTile(kind, red) {
-  return { kind, red: !!red, uid: uid++ };
+function makeTile(kind) {
+  return { kind, uid: uid++ };
 }
 
-// 136枚の牌山を作りシャッフルする（赤5あり: 5m/5p/5sを各1枚ずつ赤にする）
+// 136枚の牌山を作りシャッフルする（赤牌なし）
 export function buildShuffledWall() {
   const tiles = [];
   for (let kind = 0; kind < 34; kind++) {
     for (let i = 0; i < 4; i++) {
-      tiles.push(makeTile(kind, false));
+      tiles.push(makeTile(kind));
     }
-  }
-  for (const redKind of [MAN0 + 4, PIN0 + 4, SOU0 + 4]) {
-    const candidates = tiles.filter(t => t.kind === redKind && !t.red);
-    candidates[0].red = true;
   }
   // Fisher-Yates
   for (let i = tiles.length - 1; i > 0; i--) {
@@ -89,7 +85,7 @@ export function buildShuffledWall() {
 }
 
 export function sortHand(tiles) {
-  return [...tiles].sort((a, b) => a.kind - b.kind || (a.red === b.red ? 0 : a.red ? -1 : 1));
+  return [...tiles].sort((a, b) => a.kind - b.kind);
 }
 
 export function countsOf(tiles) {

@@ -160,14 +160,11 @@ button {
 }
 .tile-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
 .tile-btn:disabled { opacity: 0.4; }
-.tile-btn.red { color: #c62828; }
 .tile-btn.drawn { margin-left: 10px; outline: 2px solid var(--accent); }
-.tile-btn.riichi-pick { outline: 2px solid var(--gold); }
 .tile-btn.static { box-shadow: none; }
 
 .action-row { display: flex; gap: 8px; }
 .action-row .ghost-btn, .action-row .primary-btn { flex: 1; }
-.riichi-btn.active-hint { outline: 2px solid var(--gold); }
 
 .hint-text { text-align: center; font-size: 12.5px; color: var(--gold); min-height: 16px; }
 
@@ -202,6 +199,21 @@ button {
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 .yaku-list li b { color: var(--gold); }
+
+.yaku-quiz-group { margin-top: 12px; }
+.yaku-quiz-group-label { font-size: 12px; color: var(--text-dim); margin-bottom: 6px; font-weight: 600; }
+.yaku-quiz-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.yaku-chip {
+  background: var(--card);
+  color: var(--text-dim);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.yaku-chip:active { transform: scale(0.96); }
+.yaku-chip.selected { background: rgba(94, 224, 192, 0.16); border-color: var(--accent); color: var(--accent); }
 
 .quiz-hand { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; margin: 10px 0; }
 .quiz-hand .tile-btn { width: 28px; height: 38px; font-size: 21px; }
