@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>Make10</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1220">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Make10">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <h1>Make10</h1>
+    <button id="settingsBtn" class="icon-btn" aria-label="設定">⚙️</button>
+  </header>
+
+  <section class="status-bar">
+    <div class="status-chip">モード <span id="modeLabel">一人用</span></div>
+    <div class="status-chip">問題 <span id="progressLabel">-/10</span></div>
+    <div class="status-chip">ベスト <span id="bestLabel">--:--.-</span></div>
+  </section>
+
+  <div id="timerDisplay" class="timer-display hidden">
+    <span class="timer-icon">⏱</span>
+    <span id="timerText">00:00.0</span>
+  </div>
+
+  <div id="onlineRaceBar" class="online-race-bar hidden"></div>
+
+  <section class="puzzle-area">
+    <div id="puzzleTiles" class="puzzle-tiles"></div>
+    <div id="expressionDisplay" class="expression-display empty">数字をタップして式を作ろう</div>
+    <p id="errorMsg" class="error-msg" role="alert"></p>
+    <p id="hintText" class="hint-text"></p>
+  </section>
+
+  <section class="keypad">
+    <button class="op-btn" data-op="+">＋</button>
+    <button class="op-btn" data-op="-">－</button>
+    <button class="op-btn" data-op="*">×</button>
+    <button class="op-btn" data-op="/">÷</button>
+    <button id="lparenBtn">（</button>
+    <button id="rparenBtn">）</button>
+    <button id="backspaceBtn">⌫</button>
+    <button id="clearBtn">C</button>
+  </section>
+
+  <button id="submitBtn" class="primary-btn submit-btn">＝10 で決定</button>
+
+  <footer class="footer-actions">
+    <button id="hintBtn" class="ghost-btn">ヒント</button>
+    <button id="giveUpBtn" class="ghost-btn">リタイア</button>
+    <button id="newGameBtn" class="ghost-btn">新しいゲーム</button>
+  </footer>
+</div>
+
+<div id="settingsModal" class="modal hidden">
+  <div class="modal-card">
+    <h2>設定</h2>
+    <label class="field">
+      <span>モード</span>
+      <select id="modeSelect">
+        <option value="solo">一人用（スピード）</option>
+        <option value="online">複数人対戦（オンライン）</option>
+      </select>
+    </label>
+    <label class="field">
+      <span>問題数</span>
+      <select id="puzzleCountSelect">
+        <option value="5">5問</option>
+        <option value="10">10問</option>
+        <option value="15">15問</option>
+        <option value="20">20問</option>
+      </select>
+    </label>
+    <p class="modal-note">設定を変更すると、進行中のゲームはリセットされます。</p>
+    <div class="modal-actions">
+      <button id="settingsCancelBtn" class="ghost-btn">キャンセル</button>
+      <button id="settingsSaveBtn" class="primary-btn">保存して新規開始</button>
+    </div>
+  </div>
+</div>
+
+<div id="startModal" class="modal hidden">
+  <div class="modal-card">
+    <h2>Make10</h2>
+    <p class="modal-note">4つの数字と四則演算・括弧を使って10を作ろう。準備ができたらスタート！</p>
+    <div class="modal-actions">
+      <button id="startBtn" class="primary-btn">スタート</button>
+    </div>
+  </div>
+</div>
+
+<div id="onlineLobbyModal" class="modal hidden">
+  <div class="modal-card">
+    <h2>複数人対戦</h2>
+    <label class="field">
+      <span>名前</span>
+      <input id="onlineNameInput" type="text" maxlength="10" placeholder="表示名" class="text-input" autocomplete="off">
+    </label>
+    <div class="modal-actions">
+      <button id="onlineCreateBtn" class="primary-btn">ルームを作成</button>
+    </div>
+    <p class="modal-note online-or">または</p>
+    <label class="field">
+      <span>ルームコード</span>
+      <input id="onlineJoinCodeInput" type="text" maxlength="4" placeholder="ABCD" class="text-input code-input" autocomplete="off" autocapitalize="characters">
+    </label>
+    <div class="modal-actions">
+      <button id="onlineJoinBtn" class="ghost-btn">ルームに参加</button>
+    </div>
+    <p id="onlineLobbyError" class="error-msg"></p>
+    <div class="modal-actions">
+      <button id="onlineBackToSettingsBtn" class="ghost-btn">設定に戻る</button>
+    </div>
+  </div>
+</div>
+
+<div id="onlineWaitingModal" class="modal hidden">
+  <div class="modal-card">
+    <h2>ルーム <span id="onlineRoomCodeText">----</span></h2>
+    <p class="modal-note">このコードを他の参加者に伝えてください。問題数: <span id="onlineWaitingPuzzleCount">10</span>問</p>
+    <ul id="onlinePlayerList" class="online-player-list"></ul>
+    <p id="onlineWaitingError" class="error-msg"></p>
+    <div class="modal-actions">
+      <button id="onlineLeaveBtn" class="ghost-btn">退出</button>
+      <button id="onlineStartBtn" class="primary-btn">ゲーム開始</button>
+    </div>
+  </div>
+</div>
+
+<div id="onlineRaceLeaveWrap" class="online-leave-wrap hidden">
+  <button id="onlineRaceLeaveBtn" class="ghost-btn">退出</button>
+</div>
+
+<div id="resultModal" class="modal hidden">
+  <div class="modal-card">
+    <h2 id="resultTitle">クリア！</h2>
+    <p id="resultBody"></p>
+    <div class="modal-actions">
+      <button id="resultCloseBtn" class="primary-btn">もう一度あそぶ</button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+<script type="module" src="online.js"></script>
+</body>
+</html>
