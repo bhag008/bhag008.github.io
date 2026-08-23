@@ -305,6 +305,8 @@ function renderRoom(room) {
     els.raceLeaveWrap.classList.add("hidden");
     els.timerDisplay.classList.add("hidden");
     els.lobbyModal.classList.add("hidden");
+    els.resultModal.classList.add("hidden");
+    delete els.resultModal.dataset.shownFor;
 
     const players = room.players || {};
     const playerIds = sortedPlayerIds(room);
@@ -357,7 +359,8 @@ function renderRace(room) {
     .join("");
 
   if (room.status === "finished" || myFinished) {
-    renderInputDisabled();
+    const myFinishedAllPuzzles = !!(progress[clientId] && progress[clientId].finishedAt);
+    renderInputDisabled(myFinishedAllPuzzles);
   } else if (localPuzzleIndex < (room.puzzles || []).length) {
     renderTilesForOnline(room.puzzles[localPuzzleIndex].digits);
   }
@@ -384,8 +387,8 @@ function renderRace(room) {
   }
 }
 
-function renderInputDisabled() {
-  els.expressionDisplay.textContent = myFinished ? "全問クリア！他のプレイヤーを待っています…" : "終了しました";
+function renderInputDisabled(myFinishedAllPuzzles) {
+  els.expressionDisplay.textContent = myFinishedAllPuzzles ? "全問クリア！他のプレイヤーを待っています…" : "終了しました（他のプレイヤーが先に全問クリアしました）";
   els.expressionDisplay.classList.add("empty");
   els.puzzleTiles.innerHTML = "";
   els.lparenBtn.disabled = true;
