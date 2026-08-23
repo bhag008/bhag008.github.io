@@ -7,6 +7,7 @@ import * as BattleScreen from "./ui/battle.js";
 const screenEl = document.getElementById("screen");
 const goldLabel = document.getElementById("goldLabel");
 const homeBtn = document.getElementById("homeBtn");
+const syncBtn = document.getElementById("syncBtn");
 
 const SCREENS = {
   home: HomeScreen,
@@ -14,6 +15,8 @@ const SCREENS = {
   shop: ShopScreen,
   battle: BattleScreen,
 };
+
+let currentScreen = "home";
 
 let toastTimer = null;
 function toast(message) {
@@ -34,20 +37,39 @@ function refreshGold() {
   goldLabel.textContent = String(getGold());
 }
 
-const ctx = {
-  navigate,
-  refreshGold,
-  toast,
-};
-
 function navigate(screenName) {
   const screen = SCREENS[screenName];
   if (!screen) return;
+  currentScreen = screenName;
   refreshGold();
   screen.render(screenEl, ctx);
 }
 
+// クラウド同期で外部から状態が更新された時の再描画。対戦中は進行中のバトルを
+// 壊さないよう、盤面は再構築せずゴールド表示のみ更新する。
+function refreshCurrentIfSafe() {
+  if (currentScreen === "battle") {
+    refreshGold();
+  } else {
+    navigate(currentScreen);
+  }
+}
+
+const ctx = {
+  navigate,
+  refreshGold,
+  toast,
+  refreshCurrentIfSafe,
+};
+
 homeBtn.addEventListener("click", () => navigate("home"));
+if (syncBtn) syncBtn.onclick = () => toast("同期機能を読み込み中です…");
 
 refreshGold();
 navigate("home");
+
+import("./sync.js")
+  .then((mod) => mod.initSync(ctx))
+  .catch(() => {
+    // オフライン等でクラウド同期が読み込めなくても、ゲーム本体は通常通り遊べる
+  });

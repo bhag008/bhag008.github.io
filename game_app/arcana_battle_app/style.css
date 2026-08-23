@@ -73,6 +73,12 @@ button {
 }
 .icon-btn:active { transform: scale(0.94); }
 
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .gold-chip {
   background: var(--bg-elevated);
   color: var(--gold);
@@ -432,6 +438,31 @@ button {
 .modal-note { color: var(--text-dim); font-size: 14px; line-height: 1.6; }
 .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
 .modal-actions .primary-btn, .modal-actions .ghost-btn { flex: 1; }
+
+.sync-or {
+  text-align: center;
+  margin: 14px 0 10px;
+}
+
+.sync-code-display {
+  background: var(--card);
+  color: var(--gold);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-align: center;
+  border-radius: 12px;
+  padding: 14px;
+  margin: 8px 0 12px;
+}
+
+.sync-copied {
+  color: var(--accent);
+  text-align: center;
+}
+.sync-copied.hidden {
+  display: none;
+}
 
 .toast {
   position: fixed;

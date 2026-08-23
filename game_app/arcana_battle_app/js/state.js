@@ -1,5 +1,5 @@
 // 永続化状態管理（ゴールド・コレクション・デッキ・デイリーボーナス）
-import { STANDARD_CARDS, getCard } from "./cards.js";
+import { getCard } from "./cards.js";
 
 const STORAGE_KEY = "arcanabattle.state.v1";
 const DECK_SIZE = 20;
@@ -34,10 +34,12 @@ function defaultState() {
     deck: [...DEFAULT_DECK],
     lastDailyBonusDate: null,
     stats: { wins: 0, losses: 0 },
+    updatedAt: 0,
   };
 }
 
 let state = load();
+const saveListeners = [];
 
 function load() {
   try {
@@ -50,8 +52,29 @@ function load() {
   }
 }
 
-function save() {
+function persistLocal() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function save() {
+  state.updatedAt = Date.now();
+  persistLocal();
+  for (const fn of saveListeners) fn(state);
+}
+
+// 他モジュール（クラウド同期など）が状態の変化を購読するためのフック。
+// state.jsはこれを呼ぶ側の実装（Firebase等）を一切知らない＝オフラインでも本体機能に影響しない。
+export function onStateSaved(fn) {
+  saveListeners.push(fn);
+}
+
+// クラウドから取得したデータが手元より新しい場合のみ反映する（タイムスタンプ比較）。
+export function applyRemoteState(remote) {
+  if (!remote) return false;
+  if ((remote.updatedAt || 0) <= (state.updatedAt || 0)) return false;
+  state = { ...defaultState(), ...remote, stats: { ...defaultState().stats, ...(remote.stats || {}) } };
+  persistLocal();
+  return true;
 }
 
 export function getState() {
