@@ -1,4 +1,4 @@
-import { suitOf, numberOf, countsOf } from "./tiles.js";
+import { suitOf, numberOf, countsOf } from "./tiles.js?v=4";
 
 // counts(34) -> 4面子+雀頭の分解を全て列挙する（標準形のみ）
 // 戻り値: [{ melds: [{type:'triplet'|'sequence', kind, tiles:[k,k,k]}], pair: kind }]

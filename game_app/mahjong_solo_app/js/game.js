@@ -1,21 +1,25 @@
-import { buildShuffledWall, sortHand, nextKind, EAST, SOUTH } from "./tiles.js";
-import { getWaits, isWinningHand } from "./agari.js";
-import { evaluateWin, actualYakuQuizNames } from "./yaku.js";
-import { buildQuizChoices } from "./quiz.js";
+import { buildShuffledWall, sortHand, nextKind, EAST, SOUTH, WEST, NORTH } from "./tiles.js?v=4";
+import { getWaits, isWinningHand } from "./agari.js?v=4";
+import { evaluateWin, actualYakuQuizNames } from "./yaku.js?v=4";
+import { buildQuizChoices } from "./quiz.js?v=4";
 
 const DEAD_WALL_SIZE = 14; // 136 - 13(配牌) - 14(王牌) = 109枚がツモ可能
 const MAX_PENALTY = 3;
 
+const SEAT_LABEL = { [EAST]: "東家", [SOUTH]: "南家", [WEST]: "西家", [NORTH]: "北家" };
+
 // 東1局〜南4局の半荘固定。5局目から場風が南に変わる。
+// 自風は東家(親)からスタートし、局ごとに東→北→西→南→東…とローテーションする
+// （実際の4人打ちで親が下家に流れていくのと同じ回り方）。
 const KYOKU_INFO = [
-  { label: "東1局", wind: EAST },
-  { label: "東2局", wind: EAST },
-  { label: "東3局", wind: EAST },
-  { label: "東4局", wind: EAST },
-  { label: "南1局", wind: SOUTH },
-  { label: "南2局", wind: SOUTH },
-  { label: "南3局", wind: SOUTH },
-  { label: "南4局", wind: SOUTH },
+  { label: "東1局", roundWind: EAST, seatWind: EAST },
+  { label: "東2局", roundWind: EAST, seatWind: NORTH },
+  { label: "東3局", roundWind: EAST, seatWind: WEST },
+  { label: "東4局", roundWind: EAST, seatWind: SOUTH },
+  { label: "南1局", roundWind: SOUTH, seatWind: EAST },
+  { label: "南2局", roundWind: SOUTH, seatWind: NORTH },
+  { label: "南3局", roundWind: SOUTH, seatWind: WEST },
+  { label: "南4局", roundWind: SOUTH, seatWind: SOUTH },
 ];
 export const TOTAL_KYOKU = KYOKU_INFO.length;
 
@@ -44,7 +48,10 @@ function dealRound(state) {
   const kyoku = KYOKU_INFO[state.roundNumber - 1];
   state.round = {
     kyokuLabel: kyoku.label,
-    roundWind: kyoku.wind,
+    roundWind: kyoku.roundWind,
+    seatWind: kyoku.seatWind,
+    seatLabel: SEAT_LABEL[kyoku.seatWind],
+    isDealer: kyoku.seatWind === EAST,
     hand,
     drawnTile: null,
     liveWall,
@@ -88,7 +95,8 @@ function buildContext(state, isHaitei) {
     isRiichi: round.isRiichi,
     isHaitei,
     roundWind: round.roundWind,
-    seatWind: EAST,
+    seatWind: round.seatWind,
+    isDealer: round.isDealer,
     doraKinds: currentDoraKinds(round),
   };
 }
@@ -164,7 +172,7 @@ export function submitYakuGuess(state) {
   pw.yakuCorrect = correct;
 
   if (!correct) {
-    finalizeWinRound(state, { guessScore: null, scoreCorrect: null, addedScore: 0 });
+    finalizeWinRound(state, { guessScore: null, guessScoreNotation: null, scoreCorrect: null, addedScore: 0 });
     return;
   }
   pw.choices = buildQuizChoices(pw.result);
@@ -178,10 +186,11 @@ export function answerScoreQuiz(state, guessedScore) {
   if (!pw) return;
   const scoreCorrect = guessedScore === pw.result.score.total;
   const addedScore = scoreCorrect ? pw.result.score.total : 0;
-  finalizeWinRound(state, { guessScore: guessedScore, scoreCorrect, addedScore });
+  const guessedChoice = pw.choices.find(c => c.total === guessedScore);
+  finalizeWinRound(state, { guessScore: guessedScore, guessScoreNotation: guessedChoice ? guessedChoice.notation : null, scoreCorrect, addedScore });
 }
 
-function finalizeWinRound(state, { guessScore, scoreCorrect, addedScore }) {
+function finalizeWinRound(state, { guessScore, guessScoreNotation, scoreCorrect, addedScore }) {
   const round = state.round;
   const pw = round.pendingWin;
   state.totalScore += addedScore;
@@ -191,6 +200,8 @@ function finalizeWinRound(state, { guessScore, scoreCorrect, addedScore }) {
     endReason: "win",
     roundNumber: state.roundNumber,
     kyokuLabel: round.kyokuLabel,
+    isDealer: round.isDealer,
+    seatLabel: round.seatLabel,
     won: true,
     finalHand,
     winKind: round.drawnTile.kind,
@@ -202,7 +213,9 @@ function finalizeWinRound(state, { guessScore, scoreCorrect, addedScore }) {
     fu: pw.result.fu,
     isYakuman: pw.result.isYakuman,
     guessScore,
+    guessScoreNotation,
     actualScore: pw.result.score.total,
+    actualScoreNotation: pw.result.score.notation,
     scoreCorrect,
     addedScore,
     isRiichi: round.isRiichi,

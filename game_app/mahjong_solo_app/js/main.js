@@ -1,5 +1,5 @@
-import { createGame, startGame, declareTsumo, submitYakuGuess, toggleYakuSelection, answerScoreQuiz, declareRiichi, cancelRiichiPending, discardTile, nextRound, endGameNow } from "./game.js";
-import { render } from "./ui.js";
+import { createGame, startGame, declareTsumo, submitYakuGuess, toggleYakuSelection, answerScoreQuiz, declareRiichi, cancelRiichiPending, discardTile, nextRound, endGameNow } from "./game.js?v=4";
+import { render } from "./ui.js?v=4";
 
 const root = document.getElementById("screen");
 let state = createGame();

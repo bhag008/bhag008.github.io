@@ -1,5 +1,5 @@
-import { glyphOf } from "./tiles.js";
-import { YAKU_QUIZ_GROUPS } from "./yaku.js";
+import { glyphOf } from "./tiles.js?v=4";
+import { YAKU_QUIZ_GROUPS } from "./yaku.js?v=4";
 
 function esc(s) { return String(s); }
 
@@ -23,6 +23,7 @@ function statusRowHtml(state) {
   return `
     <div class="status-row">
       <div class="status-chip">${round ? round.kyokuLabel : ""}</div>
+      <div class="status-chip seat-chip ${round && round.isDealer ? "dealer" : ""}">自分: <b>${round ? round.seatLabel : ""}</b>${round && round.isDealer ? "（親）" : "（子）"}</div>
       <div class="status-chip">スコア <b>${state.totalScore}</b></div>
       <div class="status-chip">ペナルティ <span class="penalty-dots">${dots}</span></div>
       ${round && round.isRiichi ? `<div class="status-chip riichi">立直中</div>` : ""}
@@ -68,7 +69,7 @@ function introScreen() {
       <h2>一人麻雀 スコアクイズ</h2>
       <p>13枚の配牌からスタートし、1枚引いて1枚捨てるを繰り返してツモ和了を目指します。リーチとツモが可能かどうかはヒントなし、自分で判断してください。</p>
       <ul>
-        <li>東1局〜南4局の全8局で1ゲーム。南4局が終わったらゲーム終了です。</li>
+        <li>東1局〜南4局の全8局で1ゲーム。南4局が終わったらゲーム終了です。自風は局ごとに東→北→西→南…と回り、東家（親）の局は3人分の支払い、それ以外（子）の局は子/親で異なる支払いになります。</li>
         <li>テンパイだと思ったら「リーチ」、捨てる牌を選んで宣言。実際にテンパイを保てていなければペナルティ+1で局終了です。</li>
         <li>和了ったと思ったら「ツモ！」。実際には和了っていない手で宣言するとペナルティ+1で局終了です。</li>
         <li>役アリの和了を見逃して打牌し続けた場合もペナルティ+1（この場合は局は続行）。</li>
@@ -125,7 +126,7 @@ function scoreQuizScreen(state) {
       ${fuText}
       <p class="modal-note">この和了の実際の点数はどれでしょう？</p>
       <div class="quiz-choices">
-        ${pw.choices.map(c => `<button class="quiz-choice-btn" data-action="answer-score" data-value="${c}">${c}点</button>`).join("")}
+        ${pw.choices.map(c => `<button class="quiz-choice-btn" data-action="answer-score" data-value="${c.total}">${c.notation}</button>`).join("")}
       </div>
     </div></div>
   `;
@@ -136,12 +137,12 @@ function winResultBody(entry) {
   const guessedText = entry.guessedYakuNames && entry.guessedYakuNames.length > 0 ? entry.guessedYakuNames.join("、") : "（何も選択しなかった）";
   const scoreSection = entry.yakuCorrect
     ? `
-      <div class="result-row"><span>申告点</span><b>${entry.guessScore}点</b></div>
-      <div class="result-row ${entry.scoreCorrect ? "correct" : "wrong"}"><span>実際の点数</span><b>${entry.actualScore}点</b></div>
+      <div class="result-row"><span>申告点</span><b>${esc(entry.guessScoreNotation)}</b></div>
+      <div class="result-row ${entry.scoreCorrect ? "correct" : "wrong"}"><span>実際の点数</span><b>${esc(entry.actualScoreNotation)}</b></div>
       <div class="result-row ${entry.scoreCorrect ? "correct" : "wrong"}"><span>点数の判定</span><b>${entry.scoreCorrect ? "正解！スコア加算" : "不正解…"}</b></div>
     `
     : `
-      <div class="result-row"><span>実際の点数</span><b>${entry.actualScore}点</b></div>
+      <div class="result-row"><span>実際の点数</span><b>${esc(entry.actualScoreNotation)}</b></div>
       <p class="modal-note">役の判定が誤っていたため、点数クイズはなしで0点として次局へ進みます。</p>
     `;
   return `

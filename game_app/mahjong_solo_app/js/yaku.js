@@ -1,5 +1,5 @@
-import { suitOf, isHonor, isTerminal, isTerminalOrHonor, countsOfKinds, HAKU, HATSU, CHUN } from "./tiles.js";
-import { decomposeStandard, isChiitoitsu, checkKokushi, waitType } from "./decompose.js";
+import { suitOf, isHonor, isTerminal, isTerminalOrHonor, countsOfKinds, HAKU, HATSU, CHUN } from "./tiles.js?v=4";
+import { decomposeStandard, isChiitoitsu, checkKokushi, waitType } from "./decompose.js?v=4";
 
 const DRAGONS = [HAKU, HATSU, CHUN];
 const WINDS = [27, 28, 29, 30];
@@ -272,16 +272,18 @@ export function evaluateWin(hand14Kinds, winKind, ctx) {
 
   let best = null;
   for (const c of pool) {
-    const scored = { ...c, score: computeScoreFromHanFu(c) };
+    const scored = { ...c, score: computeScoreFromHanFu(c, ctx.isDealer) };
     if (!best || scored.score.total > best.score.total) best = scored;
   }
   return best;
 }
 
 // 役当てクイズ用の全候補（翻数ごとにまとめた表示順）
+// 風牌はこの半荘構成（東1局〜南4局、自風はローテーションで東→北→西→南→東…）で
+// 実際に成立しうる組み合わせのみを掲載: ダブルは東1局(東場+東家)と南4局(南場+南家)のみ発生する。
 export const YAKU_QUIZ_GROUPS = [
-  { label: "1翻", names: ["門前清自摸和", "立直", "海底摸月", "平和", "断幺九", "一盃口", "役牌(白)", "役牌(發)", "役牌(中)", "ダブル東"] },
-  { label: "2翻", names: ["二盃口", "三色同順", "三色同刻", "一気通貫", "混全帯幺九", "対々和", "三暗刻", "混老頭", "小三元", "七対子"] },
+  { label: "1翻", names: ["門前清自摸和", "立直", "海底摸月", "平和", "断幺九", "一盃口", "役牌(白)", "役牌(發)", "役牌(中)", "東", "南", "西", "北"] },
+  { label: "2翻", names: ["二盃口", "三色同順", "三色同刻", "一気通貫", "混全帯幺九", "対々和", "三暗刻", "混老頭", "小三元", "七対子", "ダブル東", "ダブル南"] },
   { label: "3翻", names: ["純全帯幺九", "混一色"] },
   { label: "6翻", names: ["清一色"] },
   { label: "役満", names: ["国士無双", "四暗刻", "大三元", "小四喜", "大四喜", "字一色", "清老頭", "緑一色", "九蓮宝燈"] },
@@ -304,7 +306,9 @@ export function actualYakuQuizNames(yakuList) {
   return [...set];
 }
 
-export function computeScoreFromHanFu({ han, fu, isYakuman, yakumanPower }) {
+// ツモ和了の点数を計算する。親(isDealer)なら全員同額（○○オール）、
+// 子なら子/親で払う額が異なる（例: 2000/4000）。
+export function computeScoreFromHanFu({ han, fu, isYakuman, yakumanPower }, isDealer) {
   let base;
   if (isYakuman) {
     base = 8000 * (yakumanPower || 1);
@@ -322,7 +326,14 @@ export function computeScoreFromHanFu({ han, fu, isYakuman, yakumanPower }) {
     base = fu * Math.pow(2, 2 + han);
     if (base > 2000) base = 2000;
   }
-  const perPlayer = Math.ceil((base * 2) / 100) * 100;
-  const total = perPlayer * 3;
-  return { base, perPlayer, total };
+
+  if (isDealer) {
+    const each = Math.ceil((base * 2) / 100) * 100;
+    const total = each * 3;
+    return { base, total, isDealer: true, childPay: each, dealerPay: each, notation: `${total}（${each}オール）` };
+  }
+  const childPay = Math.ceil((base * 1) / 100) * 100;
+  const dealerPay = Math.ceil((base * 2) / 100) * 100;
+  const total = childPay * 2 + dealerPay;
+  return { base, total, isDealer: false, childPay, dealerPay, notation: `${total}（${childPay}/${dealerPay}）` };
 }

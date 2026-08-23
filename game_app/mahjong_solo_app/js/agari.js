@@ -1,5 +1,5 @@
-import { countsOfKinds } from "./tiles.js";
-import { hasStandardDecomposition, isChiitoitsu, checkKokushi } from "./decompose.js";
+import { countsOfKinds } from "./tiles.js?v=4";
+import { hasStandardDecomposition, isChiitoitsu, checkKokushi } from "./decompose.js?v=4";
 
 // 14枚(kind配列)が和了形かどうか
 export function isWinningHand(kinds14) {
