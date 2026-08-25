@@ -10,9 +10,10 @@ export const OPPONENTS = [
     loseGold: 3,
     deck: [
       "std_squire", "std_squire", "std_shield", "std_shield", "std_spark", "std_spark",
-      "std_scout", "std_archer", "std_archer", "std_guard", "std_guard",
-      "std_knight", "std_knight", "std_bear", "std_bear", "std_fireball_small",
-      "std_raider", "std_raider", "std_healspring", "std_wolfpack",
+      "std_scout", "std_scout", "std_archer", "std_archer", "std_guard", "std_guard",
+      "std_knight", "std_knight", "std_bear", "std_bear", "std_fireball_small", "std_fireball_small",
+      "std_raider", "std_raider", "std_healspring", "std_healspring", "std_wolfpack", "std_wolfpack",
+      "std_veteran", "std_veteran", "std_cleric", "std_cleric", "std_ogre", "std_ogre",
     ],
   },
   {
@@ -25,9 +26,10 @@ export const OPPONENTS = [
     loseGold: 5,
     deck: [
       "std_squire", "std_squire", "std_shield", "std_shield", "std_spark", "std_spark",
-      "std_archer", "std_archer", "std_guard", "std_guard",
-      "std_knight", "std_knight", "std_bear", "std_raider", "std_raider",
-      "std_veteran", "std_veteran", "std_ogre", "std_fireball_small", "std_dragonet",
+      "std_scout", "std_scout", "std_archer", "std_archer", "std_guard", "std_guard",
+      "std_knight", "std_knight", "std_bear", "std_bear", "std_raider", "std_raider",
+      "std_veteran", "std_veteran", "std_ogre", "std_ogre", "std_fireball_small", "std_fireball_small",
+      "std_dragonet", "std_dragonet", "std_cleric", "std_cleric", "std_healspring", "std_healspring",
     ],
   },
   {
@@ -39,9 +41,10 @@ export const OPPONENTS = [
     winGold: 40,
     loseGold: 8,
     deck: [
-      "std_knight", "std_bear", "std_veteran", "std_veteran", "std_cleric",
-      "std_ogre", "std_ogre", "std_lightning", "std_dragonet", "std_meteor", "std_golem",
-      "fl_c2", "fl_c4", "fl_c7", "fl_r1", "fl_r2", "fl_r4", "fl_r6", "fl_c5", "fl_c8",
+      "std_knight", "std_knight", "std_bear", "std_bear", "std_veteran", "std_veteran", "std_cleric", "std_cleric",
+      "std_ogre", "std_ogre", "std_lightning", "std_lightning", "std_dragonet", "std_dragonet",
+      "std_meteor", "std_meteor", "std_golem", "std_golem",
+      "fl_c2", "fl_c2", "fl_c4", "fl_c4", "fl_c7", "fl_r1", "fl_r2", "fl_r4", "fl_r6", "fl_c5", "fl_c8", "fl_c8",
     ],
   },
   {
@@ -53,9 +56,10 @@ export const OPPONENTS = [
     winGold: 65,
     loseGold: 12,
     deck: [
-      "std_veteran", "std_dragonet", "std_golem", "std_titan", "std_lastword",
-      "fl_c7", "fl_r4", "fl_r1", "fl_r6", "fl_e1", "fl_e2", "fl_e3", "fl_e4",
-      "fl_l1", "fl_l2", "std_knight", "std_archer", "std_ogre", "fl_c5", "fl_r2",
+      "std_veteran", "std_veteran", "std_dragonet", "std_dragonet", "std_golem", "std_golem", "std_titan", "std_lastword",
+      "fl_c7", "fl_c7", "fl_r4", "fl_r4", "fl_r1", "fl_r1", "fl_r6", "fl_r6",
+      "fl_e1", "fl_e2", "fl_e3", "fl_e4", "fl_l1", "fl_l2",
+      "std_knight", "std_knight", "std_archer", "std_archer", "std_ogre", "std_ogre", "fl_c5", "fl_r2",
     ],
   },
   {
@@ -67,10 +71,10 @@ export const OPPONENTS = [
     winGold: 90,
     loseGold: 15,
     deck: [
-      "fl_c8", "ab_c1",
-      "ab_c4", "fl_c5",
-      "ab_c6", "ab_r3", "fl_c4",
-      "ab_r5", "fl_r1", "ab_e1",
+      "fl_c8", "fl_c8", "ab_c1", "ab_c1",
+      "ab_c4", "ab_c4", "fl_c5", "fl_c5",
+      "ab_c6", "ab_c6", "ab_r3", "ab_r3", "fl_c4", "fl_c4",
+      "ab_r5", "ab_r5", "fl_r1", "fl_r1", "ab_e1", "ab_e1",
       "ab_r6", "fl_r6", "fl_e1",
       "ab_r4", "fl_r4", "ab_e2",
       "ab_l2", "fl_l2", "ab_e3",

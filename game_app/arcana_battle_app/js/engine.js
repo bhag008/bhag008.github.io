@@ -27,10 +27,13 @@ function makePlayerState(deckIds) {
   };
 }
 
-export function createGame(playerDeckIds, cpuDeckIds) {
+// forceFirst: "player" | "cpu" を渡すとその側を先攻に固定する（テスト用）。省略時はランダム。
+export function createGame(playerDeckIds, cpuDeckIds, forceFirst) {
+  const first = forceFirst || (Math.random() < 0.5 ? "player" : "cpu");
+  const second = opponentOf(first);
   const game = {
     turnNumber: 1,
-    active: "player",
+    active: first,
     players: {
       player: makePlayerState(playerDeckIds),
       cpu: makePlayerState(cpuDeckIds),
@@ -41,11 +44,13 @@ export function createGame(playerDeckIds, cpuDeckIds) {
     pendingAction: null, // {type:"attack", attackerUid} | {type:"cast", handUid, card}
   };
 
-  for (let i = 0; i < 3; i++) drawCard(game, "player");
-  for (let i = 0; i < 4; i++) drawCard(game, "cpu");
+  // 先攻・後攻とも配られる手札は4枚。先攻は最初のターンに引かない代わりに1枚多く持った状態で
+  // ゲームが始まり、後攻は自分の最初のターン開始時に通常通り1枚引くため、結果的に5枚になる。
+  for (let i = 0; i < 4; i++) drawCard(game, first);
+  for (let i = 0; i < 4; i++) drawCard(game, second);
 
-  game.players.player.mana = { current: 1, max: 1 };
-  addLog(game, "対戦開始！ あなたの先攻です。");
+  game.players[first].mana = { current: 1, max: 1 };
+  addLog(game, first === "player" ? "対戦開始！ あなたの先攻です。" : "対戦開始！ 相手の先攻です。");
   return game;
 }
 
@@ -419,6 +424,6 @@ export function endTurn(game) {
   if (game.winner) return;
   const next = opponentOf(game.active);
   game.active = next;
-  if (next === "player") game.turnNumber += 1;
+  game.turnNumber += 1;
   startTurn(game, next);
 }

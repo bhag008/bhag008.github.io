@@ -2,23 +2,33 @@
 import { getCard } from "./cards.js";
 
 const STORAGE_KEY = "arcanabattle.state.v1";
-const DECK_SIZE = 20;
+const DECK_SIZE = 30;
 const MAX_COPIES = 2;
 
 const DEFAULT_DECK = [
   "std_squire", "std_squire",
   "std_shield", "std_shield",
-  "std_spark", "std_spark",
+  "std_spark",
   "std_scout",
   "std_archer", "std_archer",
+  "std_healspring",
+  "std_wolfpack",
   "std_guard", "std_guard",
   "std_knight", "std_knight",
   "std_bear",
   "std_fireball_small",
+  "std_raider", "std_raider",
   "std_veteran", "std_veteran",
   "std_cleric",
+  "std_lightning",
   "std_ogre",
   "std_dragonet",
+  "std_healall",
+  "std_giant_wolf",
+  "std_golem",
+  "std_meteor",
+  "std_titan",
+  "std_lastword",
 ];
 
 function todayStr() {

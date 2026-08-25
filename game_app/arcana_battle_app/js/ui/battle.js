@@ -52,6 +52,16 @@ export function render(container, ctx) {
   pending = null;
   locked = false;
   draw();
+
+  if (game.active === "cpu") {
+    locked = true;
+    draw();
+    runCpuTurnAndReturnToPlayer().then(() => {
+      locked = false;
+      hideCpuBanner();
+      draw();
+    });
+  }
 }
 
 function opponentTargets() {
@@ -225,12 +235,18 @@ async function handleEndTurn() {
   draw();
 
   endTurn(game); // -> CPUのターン開始
-  if (!game.winner) await processCpuTurn();
-  if (!game.winner) endTurn(game); // -> プレイヤーのターンへ
+  await runCpuTurnAndReturnToPlayer();
 
   locked = false;
   hideCpuBanner();
   draw();
+}
+
+// CPUのターンを演出付きで消化し、勝敗が付いていなければプレイヤーのターンへ戻す。
+// 通常のターン交代時と、CPUが先攻で対戦が始まった直後の両方から呼ばれる。
+async function runCpuTurnAndReturnToPlayer() {
+  if (!game.winner) await processCpuTurn();
+  if (!game.winner) endTurn(game); // -> プレイヤーのターンへ
 }
 
 async function processCpuTurn() {
