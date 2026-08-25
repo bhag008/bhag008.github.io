@@ -100,6 +100,11 @@ function findMinion(game, side, uid) {
   return game.players[side].board.find((m) => m.uid === uid);
 }
 
+// 指定した側の場にいる、指定種族のミニオンの数を数える（excludeUidを渡すとそれ自身は除外）。
+function countRace(game, side, race, excludeUid) {
+  return game.players[side].board.filter((m) => m.race === race && m.uid !== excludeUid).length;
+}
+
 function removeDeadMinions(game) {
   // デスラトルが連鎖でさらに破壊を生むことがあるためループする
   let more = true;
@@ -219,9 +224,51 @@ function applyEffectOnly(game, side, effect, target, sourceUid) {
       for (let i = 0; i < effect.draw; i++) drawCard(game, side);
       break;
     }
+    case "buff_all_friendly_race": {
+      for (const m of game.players[side].board) {
+        if (m.race !== effect.race) continue;
+        m.atk += effect.atk;
+        m.hp += effect.hp;
+        m.maxHp += effect.hp;
+      }
+      addLog(game, `${side === "player" ? "あなたの" : "相手の"}${raceLabel(effect.race)}全体が強化された`);
+      break;
+    }
+    case "buff_self_per_race_count": {
+      const self = findMinion(game, side, sourceUid);
+      if (self) {
+        const count = countRace(game, side, effect.race, sourceUid);
+        self.atk += effect.atkPerAlly * count;
+        self.hp += effect.hpPerAlly * count;
+        self.maxHp += effect.hpPerAlly * count;
+        if (count > 0) addLog(game, `${self.name} は${raceLabel(effect.race)}${count}体分強化された`);
+      }
+      break;
+    }
+    case "summon_token_and_buff_self": {
+      for (let i = 0; i < effect.count; i++) summonToken(game, side, effect.token);
+      const self = findMinion(game, side, sourceUid);
+      if (self) {
+        const count = countRace(game, side, effect.race, sourceUid);
+        self.atk += effect.atkPerAlly * count;
+        self.hp += effect.hpPerAlly * count;
+        self.maxHp += effect.hpPerAlly * count;
+      }
+      break;
+    }
+    case "draw_per_race_count": {
+      const count = Math.min(countRace(game, side, effect.race, null), effect.cap ?? Infinity);
+      for (let i = 0; i < count; i++) drawCard(game, side);
+      break;
+    }
     default:
       break;
   }
+}
+
+const RACE_LABEL = { dragon: "ドラゴン", demon: "デーモン", fairy: "妖精" };
+function raceLabel(race) {
+  return RACE_LABEL[race] || race;
 }
 
 function resolveTargetRef(targetKind, side, explicitTarget) {
@@ -272,6 +319,7 @@ function summonToken(game, side, tokenId) {
     maxHp: t.hp,
     cost: 0,
     rarity: "basic",
+    race: t.race,
     text: "",
     keywords: [...t.keywords],
     sick: true,
@@ -319,6 +367,7 @@ export function playCard(game, side, handUid, target) {
       maxHp: card.hp,
       cost: card.cost,
       rarity: card.rarity,
+      race: card.race,
       text: card.text,
       keywords: [...card.keywords],
       sick: !card.keywords.includes("charge"),

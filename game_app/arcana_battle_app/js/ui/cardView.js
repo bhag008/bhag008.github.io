@@ -1,6 +1,7 @@
 // カードのDOM描画ヘルパー
 const RARITY_LABEL = { basic: "スタンダード", common: "コモン", rare: "レア", epic: "エピック", legendary: "レジェンダリー" };
 const KEYWORD_LABEL = { taunt: "🛡挑発", charge: "⚡速攻", lifesteal: "🩸吸血" };
+const RACE_LABEL = { dragon: "🐉ドラゴン", demon: "😈デーモン", fairy: "🧚フェアリー" };
 
 function infoButtonHtml() {
   return `<button type="button" class="card-info-btn" aria-label="カード詳細">ⓘ</button>`;
@@ -28,12 +29,14 @@ export function createCardEl(card, opts = {}) {
   const keywordsLine = card.keywords && card.keywords.length
     ? `<div class="card-keywords">${card.keywords.map((k) => KEYWORD_LABEL[k] || k).join(" ")}</div>`
     : "";
+  const raceLine = card.race ? `<div class="card-race">${RACE_LABEL[card.race] || card.race}</div>` : "";
 
   el.innerHTML = `
     ${infoButtonHtml()}
     <div class="card-cost">${card.cost}</div>
     <div class="card-emoji">${card.emoji || "🃏"}</div>
     <div class="card-name">${card.name}</div>
+    ${raceLine}
     ${keywordsLine}
     ${statLine}
     ${opts.showCount ? `<div class="card-count">×${opts.count ?? 0}</div>` : ""}
@@ -54,10 +57,12 @@ export function createMinionEl(minion) {
   const keywordsLine = minion.keywords.length
     ? `<div class="minion-keywords">${minion.keywords.map((k) => KEYWORD_LABEL[k] || k).join(" ")}</div>`
     : "";
+  const raceLine = minion.race ? `<div class="minion-race">${RACE_LABEL[minion.race] || minion.race}</div>` : "";
   el.innerHTML = `
     ${infoButtonHtml()}
     <div class="minion-emoji">${minion.emoji || "🃏"}</div>
     <div class="minion-name">${minion.name}</div>
+    ${raceLine}
     ${keywordsLine}
     <div class="minion-stats"><span class="atk">${minion.atk}</span><span class="hp">${minion.hp}</span></div>
   `;
@@ -69,6 +74,7 @@ export function createMinionEl(minion) {
     atk: minion.atk,
     hp: minion.hp,
     cost: minion.cost,
+    race: minion.race,
     keywords: minion.keywords,
     text: minion.text,
   });
@@ -86,6 +92,7 @@ export function showCardDetail(card) {
   const keywordsLine = card.keywords && card.keywords.length
     ? `<div class="detail-keywords">${card.keywords.map((k) => KEYWORD_LABEL[k] || k).join("　")}</div>`
     : "";
+  const raceLine = card.race ? `<div class="detail-race">${RACE_LABEL[card.race] || card.race}</div>` : "";
 
   const overlay = document.createElement("div");
   overlay.className = "modal";
@@ -95,6 +102,7 @@ export function showCardDetail(card) {
       <div class="detail-emoji">${card.emoji || "🃏"}</div>
       <h2>${card.name}</h2>
       ${card.rarity ? `<div class="rarity-tag rarity-${card.rarity}">${cardRarityLabel(card.rarity)}</div>` : ""}
+      ${raceLine}
       <div class="detail-cost">コスト ${card.cost ?? "-"}</div>
       ${statLine}
       ${keywordsLine}
