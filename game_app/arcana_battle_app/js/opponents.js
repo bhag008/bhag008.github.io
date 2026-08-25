@@ -1,4 +1,4 @@
-// CPU対戦相手のデータ定義（レベル別に4体）
+// CPU対戦相手のデータ定義（レベル別に5体）
 export const OPPONENTS = [
   {
     id: "novice",
@@ -56,6 +56,25 @@ export const OPPONENTS = [
       "std_veteran", "std_dragonet", "std_golem", "std_titan", "std_lastword",
       "fl_c7", "fl_r4", "fl_r1", "fl_r6", "fl_e1", "fl_e2", "fl_e3", "fl_e4",
       "fl_l1", "fl_l2", "std_knight", "std_archer", "std_ogre", "fl_c5", "fl_r2",
+    ],
+  },
+  {
+    id: "abyss_lord",
+    level: 5,
+    name: "魔王ザガレス",
+    emoji: "👑😈",
+    description: "深淵の書の頂点に君臨する魔王本人。契約による自傷を厭わず、盤面制圧とカードアドバンテージの両方を狙う本作最強格の相手。",
+    winGold: 90,
+    loseGold: 15,
+    deck: [
+      "fl_c8", "ab_c1",
+      "ab_c4", "fl_c5",
+      "ab_c6", "ab_r3", "fl_c4",
+      "ab_r5", "fl_r1", "ab_e1",
+      "ab_r6", "fl_r6", "fl_e1",
+      "ab_r4", "fl_r4", "ab_e2",
+      "ab_l2", "fl_l2", "ab_e3",
+      "ab_l1",
     ],
   },
 ];
