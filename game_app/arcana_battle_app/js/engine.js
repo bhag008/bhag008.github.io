@@ -96,12 +96,23 @@ function findMinion(game, side, uid) {
 }
 
 function removeDeadMinions(game) {
-  for (const side of ["player", "cpu"]) {
-    const p = game.players[side];
-    const dead = p.board.filter((m) => m.hp <= 0);
-    if (dead.length) {
-      for (const d of dead) addLog(game, `${d.name} が破壊された`);
+  // デスラトルが連鎖でさらに破壊を生むことがあるためループする
+  let more = true;
+  while (more) {
+    more = false;
+    for (const side of ["player", "cpu"]) {
+      const p = game.players[side];
+      const dead = p.board.filter((m) => m.hp <= 0);
+      if (!dead.length) continue;
+      more = true;
       p.board = p.board.filter((m) => m.hp > 0);
+      for (const d of dead) {
+        addLog(game, `${d.name} が破壊された`);
+        const card = getCard(d.cardId);
+        if (card && card.deathrattle) {
+          applyEffectOnly(game, side, card.deathrattle, null, d.uid);
+        }
+      }
     }
   }
 }
@@ -120,6 +131,14 @@ export function checkWin(game) {
 // -------------------- 効果解決 --------------------
 // target: null | {type:"face", side} | {type:"minion", side, uid}
 export function resolveEffect(game, side, effect, target, sourceUid) {
+  applyEffectOnly(game, side, effect, target, sourceUid);
+  removeDeadMinions(game);
+  checkWin(game);
+}
+
+// removeDeadMinions/checkWinを呼ばない内部版。デスラトルや攻撃時トリガーなど、
+// 呼び出し元が後でまとめて後処理する場面で使う（多重呼び出しによる無限ループを避けるため）。
+function applyEffectOnly(game, side, effect, target, sourceUid) {
   const enemy = opponentOf(side);
   switch (effect.type) {
     case "damage": {
@@ -176,11 +195,28 @@ export function resolveEffect(game, side, effect, target, sourceUid) {
       }
       break;
     }
+    case "damage_monster_and_self": {
+      const t = resolveTargetRef(effect.target, side, target);
+      applyDamage(game, t, effect.value);
+      applyDamage(game, { type: "face", side }, effect.selfDamage);
+      break;
+    }
+    case "damage_all_enemy_and_draw": {
+      for (const m of [...game.players[enemy].board]) {
+        applyDamage(game, { type: "minion", side: enemy, uid: m.uid }, effect.value);
+      }
+      for (let i = 0; i < effect.draw; i++) drawCard(game, side);
+      break;
+    }
+    case "heal_and_draw": {
+      const t = resolveTargetRef(effect.target, side, target);
+      applyHeal(game, t, effect.value);
+      for (let i = 0; i < effect.draw; i++) drawCard(game, side);
+      break;
+    }
     default:
       break;
   }
-  removeDeadMinions(game);
-  checkWin(game);
 }
 
 function resolveTargetRef(targetKind, side, explicitTarget) {
@@ -328,6 +364,7 @@ export function declareAttack(game, side, attackerUid, target) {
   attacker.attacked = true;
   const attackerLifesteal = attacker.keywords.includes("lifesteal");
 
+  let defenderUid = null;
   if (target.type === "face") {
     dealDamageToFace(game, target.side, attacker.atk);
     if (attackerLifesteal) healFace(game, side, attacker.atk);
@@ -335,12 +372,28 @@ export function declareAttack(game, side, attackerUid, target) {
   } else {
     const defender = findMinion(game, target.side, target.uid);
     if (!defender) return false;
+    defenderUid = defender.uid;
     const defenderLifesteal = defender.keywords.includes("lifesteal");
     defender.hp -= attacker.atk;
     attacker.hp -= defender.atk;
     if (attackerLifesteal) healFace(game, side, attacker.atk);
     if (defenderLifesteal) healFace(game, target.side, defender.atk);
     addLog(game, `${attacker.name} と ${defender.name} が戦闘`);
+  }
+
+  // 攻撃時・被攻撃時トリガー（このミニオンが破壊されていても、攻撃/被弾自体は発生している）
+  const attackerCard = getCard(attacker.cardId);
+  if (attackerCard && attackerCard.onAttack) {
+    applyEffectOnly(game, side, attackerCard.onAttack, null, attacker.uid);
+  }
+  if (defenderUid !== null) {
+    const defender = findMinion(game, target.side, defenderUid);
+    if (defender) {
+      const defenderCard = getCard(defender.cardId);
+      if (defenderCard && defenderCard.onDefend) {
+        applyEffectOnly(game, target.side, defenderCard.onDefend, null, defenderUid);
+      }
+    }
   }
 
   removeDeadMinions(game);

@@ -59,12 +59,12 @@ function opponentTargets() {
   if (pending.kind === "attack") return validAttackTargets(game, "player", pending.attackerUid);
   if (pending.kind === "play") {
     const effect = pending.card.type === "minion" ? pending.card.battlecry : pending.card.effect;
-    if (effect.type === "damage") {
+    if (effect.type === "damage" || effect.type === "damage_monster_and_self") {
       const minionTargets = game.players.cpu.board.map((m) => ({ type: "minion", side: "cpu", uid: m.uid }));
       if (effect.target === "select_monster") return minionTargets;
       return [...minionTargets, { type: "face", side: "cpu" }];
     }
-    if (effect.type === "heal") {
+    if (effect.type === "heal" || effect.type === "heal_and_draw") {
       return [...game.players.player.board.map((m) => ({ type: "minion", side: "player", uid: m.uid })), { type: "face", side: "player" }];
     }
   }

@@ -5,7 +5,7 @@ import { canPlayCard, needsTarget, playCard, validAttackTargets, declareAttack, 
 function chooseSpellTarget(game, side, effect) {
   const enemy = side === "player" ? "cpu" : "player";
   if (effect.target !== "select" && effect.target !== "select_monster") return null;
-  if (effect.type === "damage") {
+  if (effect.type === "damage" || effect.type === "damage_monster_and_self") {
     const enemyBoard = game.players[enemy].board;
     const killable = enemyBoard
       .filter((m) => m.hp <= effect.value)
@@ -18,7 +18,7 @@ function chooseSpellTarget(game, side, effect) {
     }
     return { type: "face", side: enemy };
   }
-  if (effect.type === "heal") {
+  if (effect.type === "heal" || effect.type === "heal_and_draw") {
     const myBoard = game.players[side].board.filter((m) => m.hp < m.maxHp);
     if (myBoard.length) {
       myBoard.sort((a, b) => a.hp - b.hp);
