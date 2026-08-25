@@ -3,7 +3,7 @@ import { getCard, TOKENS } from "./cards.js";
 
 export const MAX_BOARD = 5;
 export const MAX_HAND = 8;
-export const START_HP = 20;
+export const START_HP = 25;
 export const MAX_MANA = 10;
 
 function shuffle(arr) {
@@ -185,7 +185,7 @@ export function resolveEffect(game, side, effect, target, sourceUid) {
 
 function resolveTargetRef(targetKind, side, explicitTarget) {
   const enemy = opponentOf(side);
-  if (targetKind === "select") return explicitTarget;
+  if (targetKind === "select" || targetKind === "select_monster") return explicitTarget;
   if (targetKind === "enemy_face") return { type: "face", side: enemy };
   if (targetKind === "self_face") return { type: "face", side };
   return null;
@@ -253,7 +253,7 @@ export function canPlayCard(game, side, handUid) {
 
 export function needsTarget(card) {
   const eff = card.type === "minion" ? card.battlecry : card.effect;
-  return !!eff && eff.target === "select";
+  return !!eff && (eff.target === "select" || eff.target === "select_monster");
 }
 
 export function playCard(game, side, handUid, target) {

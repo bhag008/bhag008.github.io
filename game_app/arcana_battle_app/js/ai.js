@@ -4,13 +4,18 @@ import { canPlayCard, needsTarget, playCard, validAttackTargets, declareAttack, 
 
 function chooseSpellTarget(game, side, effect) {
   const enemy = side === "player" ? "cpu" : "player";
-  if (effect.target !== "select") return null;
+  if (effect.target !== "select" && effect.target !== "select_monster") return null;
   if (effect.type === "damage") {
     const enemyBoard = game.players[enemy].board;
     const killable = enemyBoard
       .filter((m) => m.hp <= effect.value)
       .sort((a, b) => b.atk - a.atk);
     if (killable.length) return { type: "minion", side: enemy, uid: killable[0].uid };
+    if (effect.target === "select_monster") {
+      if (!enemyBoard.length) return null; // 対象になるミニオンがいない場合は不発
+      const weakest = [...enemyBoard].sort((a, b) => a.hp - b.hp)[0];
+      return { type: "minion", side: enemy, uid: weakest.uid };
+    }
     return { type: "face", side: enemy };
   }
   if (effect.type === "heal") {
@@ -28,6 +33,7 @@ function chooseSpellTarget(game, side, effect) {
 // battle.js側はこれを1ステップずつ受け取り、演出（再描画・待機）を挟みながら消費する。
 function* playCpuCardsSteps(game, side) {
   const p = game.players[side];
+  const enemy = side === "player" ? "cpu" : "player";
   let playedSomething = true;
   while (playedSomething) {
     playedSomething = false;
@@ -36,7 +42,17 @@ function* playCpuCardsSteps(game, side) {
       .filter(({ h, card }) => canPlayCard(game, side, h.uid) && (card.type !== "minion" || p.board.length < MAX_BOARD))
       .sort((a, b) => b.card.cost - a.card.cost);
     if (!playable.length) break;
-    const { h, card } = playable[0];
+
+    // 防御優先: 場に挑発がなく、敵に盤面がある（速攻で押し込まれる恐れがある）場合は
+    // 出せる挑発ミニオンを最優先で展開してリーダーを守る。
+    const hasTauntOnBoard = p.board.some((m) => m.keywords.includes("taunt"));
+    const underThreat = game.players[enemy].board.length > 0;
+    let choice = playable[0];
+    if (!hasTauntOnBoard && underThreat) {
+      const tauntOption = playable.find(({ card }) => card.type === "minion" && card.keywords.includes("taunt"));
+      if (tauntOption) choice = tauntOption;
+    }
+    const { h, card } = choice;
     let target = null;
     if (needsTarget(card)) {
       const effect = card.type === "minion" ? card.battlecry : card.effect;
