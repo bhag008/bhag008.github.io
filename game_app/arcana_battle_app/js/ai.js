@@ -122,16 +122,24 @@ function* cpuAttackPhaseSteps(game, side) {
         if (bestKill) chosen = bestKill.target;
       }
 
-      // 顔を殴れるなら殴る、挑発しかなければ最もHPが低い挑発を殴る
-      if (!chosen) {
-        if (faceTarget) {
-          chosen = faceTarget;
-        } else if (minionTargets.length) {
-          chosen = [...minionTargets].sort((a, b) => {
-            const da = game.players[enemy].board.find((m) => m.uid === a.uid);
-            const db = game.players[enemy].board.find((m) => m.uid === b.uid);
-            return (da?.hp ?? 0) - (db?.hp ?? 0);
-          })[0];
+      // 顔を殴れるなら殴る
+      if (!chosen && faceTarget) {
+        chosen = faceTarget;
+      }
+
+      // 挑発しか攻撃できない場合: 単独で倒せなくても、まだ攻撃していない
+      // 味方全体の攻撃力を合計すればこのターン中に倒し切れるなら集中攻撃する。
+      // それでも倒せないなら一方的に潰されるだけなので、攻撃せず温存する。
+      if (!chosen && minionTargets.length) {
+        const weakestTarget = [...minionTargets].sort((a, b) => {
+          const da = game.players[enemy].board.find((m) => m.uid === a.uid);
+          const db = game.players[enemy].board.find((m) => m.uid === b.uid);
+          return (da?.hp ?? 0) - (db?.hp ?? 0);
+        })[0];
+        const weakestDefender = game.players[enemy].board.find((m) => m.uid === weakestTarget.uid);
+        const remainingAtk = attackers.filter((a) => !a.attacked).reduce((s, a) => s + a.atk, 0);
+        if (weakestDefender && remainingAtk >= weakestDefender.hp) {
+          chosen = weakestTarget;
         }
       }
 
