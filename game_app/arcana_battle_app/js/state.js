@@ -4,6 +4,7 @@ import { getCard } from "./cards.js";
 const STORAGE_KEY = "arcanabattle.state.v1";
 const DECK_SIZE = 30;
 const MAX_COPIES = 2;
+const MAX_DECK_SLOTS = 5;
 
 const DEFAULT_DECK = [
   "std_squire", "std_squire",
@@ -41,7 +42,8 @@ function defaultState() {
     version: 1,
     gold: 300,
     collection: {},
-    deck: [...DEFAULT_DECK],
+    decks: [{ name: "デッキ1", cards: [...DEFAULT_DECK] }],
+    activeDeckIndex: 0,
     lastDailyBonusDate: null,
     stats: { wins: 0, losses: 0 },
     updatedAt: 0,
@@ -51,12 +53,24 @@ function defaultState() {
 let state = load();
 const saveListeners = [];
 
+// 旧形式（単一デッキ = state.deck）のセーブデータを複数デッキ形式に移行する。
+function migrateShape(parsed) {
+  const merged = { ...defaultState(), ...parsed, stats: { ...defaultState().stats, ...(parsed.stats || {}) } };
+  if (!Array.isArray(merged.decks) || !merged.decks.length) {
+    if (Array.isArray(parsed.deck)) {
+      merged.decks = [{ name: "デッキ1", cards: parsed.deck }];
+      merged.activeDeckIndex = 0;
+    }
+  }
+  delete merged.deck;
+  return merged;
+}
+
 function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultState();
-    const parsed = JSON.parse(raw);
-    return { ...defaultState(), ...parsed, stats: { ...defaultState().stats, ...(parsed.stats || {}) } };
+    return migrateShape(JSON.parse(raw));
   } catch {
     return defaultState();
   }
@@ -82,7 +96,7 @@ export function onStateSaved(fn) {
 export function applyRemoteState(remote) {
   if (!remote) return false;
   if ((remote.updatedAt || 0) <= (state.updatedAt || 0)) return false;
-  state = { ...defaultState(), ...remote, stats: { ...defaultState().stats, ...(remote.stats || {}) } };
+  state = migrateShape(remote);
   persistLocal();
   return true;
 }
@@ -144,19 +158,51 @@ export function isDailyBonusAvailable() {
   return state.lastDailyBonusDate !== todayStr();
 }
 
-export function getDeck() {
-  return [...state.deck];
+export function getDecks() {
+  return state.decks.map((d) => ({ name: d.name, cards: [...d.cards] }));
 }
 
-export function setDeck(cardIds) {
-  state.deck = [...cardIds];
+export function getActiveDeckIndex() {
+  return state.activeDeckIndex;
+}
+
+// 対戦で実際に使うデッキ（使用中デッキ）。
+export function getActiveDeck() {
+  const slot = state.decks[state.activeDeckIndex] || state.decks[0];
+  return slot ? [...slot.cards] : [];
+}
+
+export function setActiveDeckIndex(index) {
+  if (!state.decks[index]) return;
+  state.activeDeckIndex = index;
   save();
 }
 
-export function deckCardCounts() {
-  const counts = {};
-  for (const id of state.deck) counts[id] = (counts[id] || 0) + 1;
-  return counts;
+export function saveDeckSlot(index, cardIds) {
+  if (!state.decks[index]) return;
+  state.decks[index] = { ...state.decks[index], cards: [...cardIds] };
+  save();
+}
+
+// 新しい空のデッキ枠を追加する。上限（5枠）に達している場合は-1を返す。
+export function addDeckSlot() {
+  if (state.decks.length >= MAX_DECK_SLOTS) return -1;
+  state.decks.push({ name: `デッキ${state.decks.length + 1}`, cards: [] });
+  save();
+  return state.decks.length - 1;
+}
+
+// デッキ枠を削除する。最低1枠は残るため、残り1枠のときは何もしない。
+export function deleteDeckSlot(index) {
+  if (state.decks.length <= 1 || !state.decks[index]) return false;
+  state.decks.splice(index, 1);
+  if (state.activeDeckIndex >= state.decks.length) {
+    state.activeDeckIndex = state.decks.length - 1;
+  } else if (state.activeDeckIndex > index) {
+    state.activeDeckIndex -= 1;
+  }
+  save();
+  return true;
 }
 
 export function validateDeck(cardIds) {
@@ -183,4 +229,4 @@ export function recordBattleResult(won) {
   save();
 }
 
-export { DECK_SIZE, MAX_COPIES };
+export { DECK_SIZE, MAX_COPIES, MAX_DECK_SLOTS };

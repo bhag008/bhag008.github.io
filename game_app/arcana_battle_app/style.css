@@ -200,6 +200,50 @@ button {
 }
 .deck-size.ok { color: var(--accent); }
 
+.deck-slot-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.deck-slot-chip {
+  flex-shrink: 0;
+  background: var(--bg-elevated);
+  color: var(--text-dim);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+.deck-slot-chip.editing { border-color: var(--accent); color: var(--text); }
+.deck-slot-chip.add-slot { color: var(--accent); }
+.deck-slot-count { font-size: 10px; color: var(--text-dim); font-weight: 600; }
+.deck-slot-chip.editing .deck-slot-count { color: var(--text-dim); }
+
+.deck-slot-actions {
+  display: flex;
+  gap: 8px;
+}
+.deck-slot-actions .ghost-btn { flex: 1; }
+.deck-slot-active-badge {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--bg-elevated);
+  border-radius: var(--radius);
+  min-height: 44px;
+}
+
 .deck-list, .card-grid, .reveal-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));

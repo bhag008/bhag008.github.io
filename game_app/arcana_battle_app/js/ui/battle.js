@@ -1,5 +1,5 @@
 import { getCard } from "../cards.js";
-import { getDeck, validateDeck, addGold, recordBattleResult } from "../state.js";
+import { getActiveDeck, validateDeck, addGold, recordBattleResult } from "../state.js";
 import {
   createGame, playCard, canPlayCard, needsTarget, declareAttack, validAttackTargets, endTurn,
 } from "../engine.js";
@@ -39,7 +39,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 export function render(container, ctx) {
   containerRef = container;
   ctxRef = ctx;
-  const playerDeck = getDeck();
+  const playerDeck = getActiveDeck();
   const errors = validateDeck(playerDeck);
   if (errors.length) {
     container.innerHTML = `<p class="empty-note">${errors[0]}<br>先にデッキ編成を行ってください。</p>
