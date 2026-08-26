@@ -138,10 +138,10 @@ export const EXPANSION_CARDS = {
   ],
   fairy: [
     // common
-    { id: "fa_c1", name: "妖精の斥候", emoji: "🧚", cost: 1, type: "minion", atk: 1, hp: 1, keywords: [], race: "fairy", rarity: "common", set: "fairy", text: "" },
-    { id: "fa_c2", name: "光る妖精", emoji: "✨", cost: 1, type: "minion", atk: 0, hp: 2, keywords: [], race: "fairy", rarity: "common", set: "fairy", text: "" },
+    { id: "fa_c1", name: "妖精の斥候", emoji: "🧚", cost: 1, type: "minion", atk: 1, hp: 2, keywords: [], race: "fairy", rarity: "common", set: "fairy", text: "" },
+    { id: "fa_c2", name: "光る妖精", emoji: "✨", cost: 1, type: "minion", atk: 0, hp: 3, keywords: ["taunt"], race: "fairy", rarity: "common", set: "fairy", text: "挑発" },
     { id: "fa_c3", name: "妖精の輪", emoji: "🍄", cost: 2, type: "spell", rarity: "common", set: "fairy", text: "1/1の妖精のかけらを2体呼び出す", effect: { type: "summon_token", token: "fairy_token", count: 2, target: "none" } },
-    { id: "fa_c4", name: "双子の妖精", emoji: "🧚", cost: 2, type: "minion", atk: 1, hp: 1, keywords: [], race: "fairy", rarity: "common", set: "fairy", text: "戦場に出た時: 自分の妖精が2体以上いれば、敵ミニオン1体をランダムに手札へ戻す", battlecry: { type: "bounce_random_enemy_if_race_count", race: "fairy", threshold: 2, count: 1, target: "none" } },
+    { id: "fa_c4", name: "双子の妖精", emoji: "🧚", cost: 2, type: "minion", atk: 2, hp: 1, keywords: [], race: "fairy", rarity: "common", set: "fairy", text: "戦場に出た時: 自分の妖精が2体以上いれば、敵ミニオン1体をランダムに手札へ戻す", battlecry: { type: "bounce_random_enemy_if_race_count", race: "fairy", threshold: 2, count: 1, target: "none" } },
     { id: "fa_c5", name: "妖精の護符", emoji: "🔮", cost: 1, type: "spell", rarity: "common", set: "fairy", text: "対象を3回復", effect: { type: "heal", value: 3, target: "select" } },
     { id: "fa_c6", name: "群れの妖精", emoji: "🧚", cost: 3, type: "minion", atk: 1, hp: 1, keywords: [], race: "fairy", rarity: "common", set: "fairy", text: "戦場に出た時: 他の妖精の数だけ+2/+2", battlecry: { type: "buff_self_per_race_count", race: "fairy", atkPerAlly: 2, hpPerAlly: 2, target: "none" } },
     { id: "fa_c7", name: "妖精の盾", emoji: "🛡️", cost: 3, type: "minion", atk: 3, hp: 4, keywords: ["taunt"], race: "fairy", rarity: "common", set: "fairy", text: "挑発" },
@@ -160,7 +160,7 @@ export const EXPANSION_CARDS = {
     { id: "fa_e4", name: "妖精郷の守護者", emoji: "🌲", cost: 7, type: "minion", atk: 6, hp: 7, keywords: ["taunt"], race: "fairy", rarity: "epic", set: "fairy", text: "挑発。戦場に出た時: 他の妖精の数だけ+1/+1", battlecry: { type: "buff_self_per_race_count", race: "fairy", atkPerAlly: 1, hpPerAlly: 1, target: "none" } },
     // legendary
     { id: "fa_l1", name: "妖精女王ティターニエラ", emoji: "👑🧚", cost: 7, type: "minion", atk: 4, hp: 4, keywords: [], race: "fairy", rarity: "legendary", set: "fairy", text: "戦場に出た時: 1/1の妖精のかけらを3体呼び出し、他の妖精の数だけ+1/+1", battlecry: { type: "summon_token_and_buff_self", token: "fairy_token", count: 3, race: "fairy", atkPerAlly: 1, hpPerAlly: 1, target: "none" } },
-    { id: "fa_l2", name: "妖精の守り手エルフィーナ", emoji: "🛡️🧚", cost: 6, type: "minion", atk: 3, hp: 5, keywords: ["taunt"], race: "fairy", rarity: "legendary", set: "fairy", text: "挑発。戦場に出た時: 自分の妖精全体に+1/+2を付与", battlecry: { type: "buff_all_friendly_race", race: "fairy", atk: 1, hp: 2, target: "none" } },
+    { id: "fa_l2", name: "妖精の守り手エルフィーナ", emoji: "🛡️🧚", cost: 6, type: "minion", atk: 5, hp: 6, keywords: ["taunt"], race: "fairy", rarity: "legendary", set: "fairy", text: "挑発。戦場に出た時: 自分の妖精全体に+1/+2を付与", battlecry: { type: "buff_all_friendly_race", race: "fairy", atk: 1, hp: 2, target: "none" } },
   ],
 };
 
