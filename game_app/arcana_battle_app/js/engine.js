@@ -105,6 +105,14 @@ function countRace(game, side, race, excludeUid) {
   return game.players[side].board.filter((m) => m.race === race && m.uid !== excludeUid).length;
 }
 
+// costReducePerRaceを持つカードは、場の指定種族の数に応じて実際のコストが下がる（上限あり）。
+export function getEffectiveCost(game, side, card) {
+  if (!card.costReducePerRace) return card.cost;
+  const { race, cap } = card.costReducePerRace;
+  const reduction = Math.min(countRace(game, side, race, null), cap);
+  return Math.max(0, card.cost - reduction);
+}
+
 function removeDeadMinions(game) {
   // デスラトルが連鎖でさらに破壊を生むことがあるためループする
   let more = true;
@@ -261,6 +269,24 @@ function applyEffectOnly(game, side, effect, target, sourceUid) {
       for (let i = 0; i < count; i++) drawCard(game, side);
       break;
     }
+    case "bounce_random_enemy_if_race_count": {
+      const count = countRace(game, side, effect.race, sourceUid);
+      if (count < effect.threshold) break;
+      for (let i = 0; i < effect.count; i++) {
+        const enemyP = game.players[enemy];
+        const bounceable = enemyP.board.filter((m) => getCard(m.cardId));
+        if (!bounceable.length) break;
+        const chosen = bounceable[Math.floor(Math.random() * bounceable.length)];
+        enemyP.board = enemyP.board.filter((m) => m.uid !== chosen.uid);
+        if (enemyP.hand.length < MAX_HAND) {
+          enemyP.hand.push({ uid: game.nextUid++, cardId: chosen.cardId });
+          addLog(game, `${chosen.name} が手札に戻された`);
+        } else {
+          addLog(game, `${chosen.name} は手札があふれて消滅した`);
+        }
+      }
+      break;
+    }
     default:
       break;
   }
@@ -335,7 +361,7 @@ export function canPlayCard(game, side, handUid) {
   if (!item) return false;
   const card = getCard(item.cardId);
   if (!card) return false;
-  if (card.cost > p.mana.current) return false;
+  if (getEffectiveCost(game, side, card) > p.mana.current) return false;
   if (card.type === "minion" && p.board.length >= MAX_BOARD) return false;
   return true;
 }
@@ -353,7 +379,7 @@ export function playCard(game, side, handUid, target) {
   const card = getCard(item.cardId);
   if (!canPlayCard(game, side, handUid)) return false;
 
-  p.mana.current -= card.cost;
+  p.mana.current -= getEffectiveCost(game, side, card);
   p.hand.splice(idx, 1);
 
   if (card.type === "minion") {

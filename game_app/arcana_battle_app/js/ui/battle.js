@@ -1,7 +1,7 @@
 import { getCard } from "../cards.js";
 import { getActiveDeck, validateDeck, addGold, recordBattleResult } from "../state.js";
 import {
-  createGame, playCard, canPlayCard, needsTarget, declareAttack, validAttackTargets, endTurn,
+  createGame, playCard, canPlayCard, needsTarget, declareAttack, validAttackTargets, endTurn, getEffectiveCost,
 } from "../engine.js";
 import { runCpuTurnSteps } from "../ai.js";
 import { getOpponent } from "../opponents.js";
@@ -153,7 +153,8 @@ function draw() {
   for (const item of p.hand) {
     const cardDef = getCard(item.cardId);
     const affordable = canPlayCard(game, "player", item.uid);
-    const el = createCardEl(cardDef, { small: true, disabled: !affordable && game.active === "player" });
+    const costOverride = getEffectiveCost(game, "player", cardDef);
+    const el = createCardEl(cardDef, { small: true, disabled: !affordable && game.active === "player", costOverride });
     if (pending && pending.kind === "play" && pending.handUid === item.uid) el.classList.add("selected");
     el.addEventListener("click", () => handleHandCardClick(item, cardDef));
     handRow.appendChild(el);

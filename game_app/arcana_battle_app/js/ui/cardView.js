@@ -30,10 +30,12 @@ export function createCardEl(card, opts = {}) {
     ? `<div class="card-keywords">${card.keywords.map((k) => KEYWORD_LABEL[k] || k).join(" ")}</div>`
     : "";
   const raceLine = card.race ? `<div class="card-race">${RACE_LABEL[card.race] || card.race}</div>` : "";
+  const displayCost = opts.costOverride ?? card.cost;
+  const costReduced = displayCost < card.cost;
 
   el.innerHTML = `
     ${infoButtonHtml()}
-    <div class="card-cost">${card.cost}</div>
+    <div class="card-cost${costReduced ? " reduced" : ""}">${displayCost}</div>
     <div class="card-emoji">${card.emoji || "🃏"}</div>
     <div class="card-name">${card.name}</div>
     ${raceLine}
