@@ -1,7 +1,7 @@
 import { OPPONENTS } from "../opponents.js";
 import { setSelectedOpponentId } from "../selection.js";
 
-const STARS = { 1: "★☆☆☆☆", 2: "★★☆☆☆", 3: "★★★☆☆", 4: "★★★★☆", 5: "★★★★★" };
+const STARS = { 1: "★☆☆☆☆", 2: "★★☆☆☆", 3: "★★★☆☆", 4: "★★★★☆", 5: "★★★★★", 6: "★★★★★👑" };
 
 export function render(container, ctx) {
   container.innerHTML = `

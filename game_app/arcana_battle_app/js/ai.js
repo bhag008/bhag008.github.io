@@ -29,6 +29,13 @@ function chooseSpellTarget(game, side, effect) {
   return { type: "face", side: enemy };
 }
 
+// 自身の場の頭数に応じて強くなる「スケーリング」系の戦場効果かどうか。
+// これらは場が育ってから使う方が価値が高いため、他に出せるカードがない時まで温存させる。
+function isScalerBattlecry(card) {
+  const eff = card.type === "minion" ? card.battlecry : card.effect;
+  return !!eff && (eff.type === "buff_self_per_race_count" || eff.type === "summon_token_and_buff_self");
+}
+
 // 1回分の行動（カードプレイ・攻撃）ごとに、その間に追加されたログ行を添えてyieldする。
 // battle.js側はこれを1ステップずつ受け取り、演出（再描画・待機）を挟みながら消費する。
 function* playCpuCardsSteps(game, side) {
@@ -47,9 +54,13 @@ function* playCpuCardsSteps(game, side) {
     // 出せる挑発ミニオンを最優先で展開してリーダーを守る。
     const hasTauntOnBoard = p.board.some((m) => m.keywords.includes("taunt"));
     const underThreat = game.players[enemy].board.length > 0;
-    let choice = playable[0];
+
+    // スケーリング系は温存: 他に出せるカードがあればそちらを先に出し、盤面を育ててから使う。
+    const nonScalers = playable.filter(({ card }) => !isScalerBattlecry(card));
+    const pool = nonScalers.length ? nonScalers : playable;
+    let choice = pool[0];
     if (!hasTauntOnBoard && underThreat) {
-      const tauntOption = playable.find(({ card }) => card.type === "minion" && card.keywords.includes("taunt"));
+      const tauntOption = pool.find(({ card }) => card.type === "minion" && card.keywords.includes("taunt"));
       if (tauntOption) choice = tauntOption;
     }
     const { h, card } = choice;

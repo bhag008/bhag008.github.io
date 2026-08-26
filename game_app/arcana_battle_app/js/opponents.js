@@ -1,4 +1,4 @@
-// CPU対戦相手のデータ定義（レベル別に5体）
+// CPU対戦相手のデータ定義（レベル別に6体）
 export const OPPONENTS = [
   {
     id: "novice",
@@ -79,6 +79,21 @@ export const OPPONENTS = [
       "ab_r4", "fl_r4", "ab_e2",
       "ab_l2", "fl_l2", "ab_e3",
       "ab_l1",
+    ],
+  },
+  {
+    id: "fairy_queen",
+    level: 6,
+    name: "妖精女王ティターニエラ",
+    emoji: "👑🧚",
+    description: "妖精の書の頂点に立つ女王本人。挑発と除去で場を制圧しつつ、群れが揃うと一気に加速する強力な相手。",
+    winGold: 75,
+    loseGold: 14,
+    deck: [
+      "fa_r4", "fa_e4", "fa_e4", "fa_l1", "fa_c8",
+      "std_fireball_small", "std_fireball_small", "std_lightning", "std_lightning", "std_meteor", "std_lastword", "std_lastword", "fl_c5", "ab_r5", "ab_r5",
+      "fl_r6", "fl_r6", "std_dragonet", "std_dragonet", "std_veteran", "std_veteran", "std_ogre", "ab_r6", "ab_r6", "fl_e1",
+      "fl_l2", "ab_e3", "fl_e3", "std_healspring", "fl_r1",
     ],
   },
 ];
