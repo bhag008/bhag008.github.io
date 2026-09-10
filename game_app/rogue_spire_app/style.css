@@ -173,3 +173,17 @@ button { font-family: inherit; }
 .deck-modal-list { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; padding-bottom: 10px; }
 
 .target-hint { position: fixed; bottom: 200px; left: 50%; transform: translateX(-50%); background: var(--danger); color: white; font-size: 12px; padding: 6px 14px; border-radius: 20px; z-index: 15; }
+
+/* --- Shop / Event --- */
+.gold-icon { color: var(--accent-2); }
+.shop-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 20px 16px 32px; text-align: center; }
+.shop-wrap h2 { color: var(--accent-2); margin-bottom: 4px; }
+.shop-relic-wrap { margin-bottom: 16px; }
+.shop-relic-wrap .relic-reward-card { margin-bottom: 0; }
+.shop-item-price { margin-top: 6px; font-size: 12px; color: var(--accent-2); font-weight: 700; }
+.card.sold { opacity: 0.35; pointer-events: none; }
+.card.unaffordable-price { opacity: 0.5; }
+#btnShopRemove { margin-bottom: 10px; }
+.event-choices { display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 6px; }
+.event-choices .btn { width: 100%; max-width: 420px; white-space: normal; line-height: 1.4; padding: 12px 16px; }
+.event-result { margin-top: 18px; font-size: 13.5px; color: var(--text); max-width: 420px; }

@@ -4,6 +4,7 @@
 // / 'attackDebuff'(value,debuffStat,debuffAmount:攻撃+デバフ付与)
 
 const ENEMY_DB = {
+  // --- 第1層 ---
   ashWolf: {
     name: '灰の狼', maxHp: [16, 20], isElite: false,
     pattern: [
@@ -73,6 +74,147 @@ const ENEMY_DB = {
       { kind: 'attack', value: 8, hits: 3 },
     ],
   },
+
+  // --- 第2層 ---
+  boneReaper: {
+    name: '骨の死神', maxHp: [30, 34], isElite: false,
+    pattern: [
+      { kind: 'attack', value: 12 },
+      { kind: 'attack', value: 12 },
+      { kind: 'buff', stat: 'strength', value: 3 },
+    ],
+  },
+  crimsonHound: {
+    name: '紅蓮の猟犬', maxHp: [24, 28], isElite: false,
+    pattern: [
+      { kind: 'attackDebuff', value: 9, debuffStat: 'weak', debuffAmount: 1 },
+      { kind: 'attack', value: 11 },
+      { kind: 'attack', value: 11 },
+    ],
+  },
+  ironWraith: {
+    name: '鉄の亡霊', maxHp: [38, 42], isElite: false, thorns: 4,
+    pattern: [
+      { kind: 'defend', value: 14 },
+      { kind: 'attack', value: 15 },
+    ],
+  },
+  twinBlades: {
+    name: '双刃の狩人', maxHp: [16, 19], isElite: false,
+    pattern: [
+      { kind: 'attackDebuff', value: 7, debuffStat: 'vulnerable', debuffAmount: 1 },
+      { kind: 'attack', value: 10 },
+    ],
+  },
+  ashScholar: {
+    name: '灰の学者', maxHp: [28, 32], isElite: false,
+    pattern: [
+      { kind: 'poison', value: 6 },
+      { kind: 'attack', value: 11 },
+    ],
+  },
+  ragingBrute: {
+    name: '怒れる巨漢', maxHp: [34, 38], isElite: false,
+    pattern: [
+      { kind: 'buff', stat: 'strength', value: 4 },
+      { kind: 'attack', value: 20 },
+    ],
+  },
+  voidSentinel: {
+    name: '虚無の番人', maxHp: [60, 65], isElite: true, thorns: 3,
+    pattern: [
+      { kind: 'defend', value: 16 },
+      { kind: 'attack', value: 20 },
+      { kind: 'attack', value: 20 },
+    ],
+  },
+  plagueBringer: {
+    name: '疫病の使者', maxHp: [55, 60], isElite: true,
+    pattern: [
+      { kind: 'poison', value: 8 },
+      { kind: 'attackDebuff', value: 14, debuffStat: 'weak', debuffAmount: 2 },
+      { kind: 'attack', value: 18 },
+    ],
+  },
+  theHollowKing: {
+    name: '虚ろなる王', maxHp: [140, 140], isElite: true, isBoss: true,
+    pattern: [
+      { kind: 'attack', value: 22 },
+      { kind: 'poison', value: 6 },
+      { kind: 'buff', stat: 'strength', value: 5 },
+      { kind: 'attack', value: 11, hits: 3 },
+    ],
+  },
+
+  // --- 第3層 ---
+  obsidianGolem: {
+    name: '黒曜石の巨像', maxHp: [45, 50], isElite: false, thorns: 5,
+    pattern: [
+      { kind: 'defend', value: 20 },
+      { kind: 'attack', value: 24 },
+    ],
+  },
+  soulReaver: {
+    name: '魂喰らいの影', maxHp: [38, 42], isElite: false,
+    pattern: [
+      { kind: 'attackDebuff', value: 16, debuffStat: 'vulnerable', debuffAmount: 2 },
+      { kind: 'attack', value: 20 },
+    ],
+  },
+  infernoWisp: {
+    name: '業火の鬼火', maxHp: [22, 26], isElite: false,
+    pattern: [
+      { kind: 'poison', value: 8 },
+      { kind: 'attack', value: 12 },
+    ],
+  },
+  ashenSpawn: {
+    name: '灰塔の眷属', maxHp: [50, 55], isElite: false,
+    pattern: [
+      { kind: 'buff', stat: 'strength', value: 6 },
+      { kind: 'attack', value: 28 },
+    ],
+  },
+  witheredPriest: {
+    name: '朽ちた司祭', maxHp: [40, 45], isElite: false,
+    pattern: [
+      { kind: 'poison', value: 10 },
+      { kind: 'attack', value: 18 },
+    ],
+  },
+  ragingWraith: {
+    name: '怨嗟の亡霊', maxHp: [42, 46], isElite: false,
+    pattern: [
+      { kind: 'attack', value: 16, hits: 2 },
+      { kind: 'buff', stat: 'strength', value: 4 },
+    ],
+  },
+  twinTyrants: {
+    name: '双王の残影', maxHp: [80, 85], isElite: true, thorns: 4,
+    pattern: [
+      { kind: 'attack', value: 26 },
+      { kind: 'defend', value: 22 },
+      { kind: 'attack', value: 26 },
+    ],
+  },
+  deathHarbinger: {
+    name: '死を告げる者', maxHp: [75, 80], isElite: true,
+    pattern: [
+      { kind: 'poison', value: 12 },
+      { kind: 'attackDebuff', value: 24, debuffStat: 'weak', debuffAmount: 3 },
+      { kind: 'attack', value: 30 },
+    ],
+  },
+  theAshenSovereign: {
+    name: '灰塔の女王', maxHp: [220, 220], isElite: true, isBoss: true,
+    pattern: [
+      { kind: 'attack', value: 30 },
+      { kind: 'poison', value: 10 },
+      { kind: 'buff', stat: 'strength', value: 6 },
+      { kind: 'attack', value: 14, hits: 3 },
+      { kind: 'defend', value: 25 },
+    ],
+  },
 };
 
 export function getEnemyDef(id) {
@@ -112,26 +254,46 @@ export function rollIntent(enemyInst) {
   return raw;
 }
 
-export const NORMAL_ENEMY_IDS = ['ashWolf', 'rottedKnight', 'thornGolem', 'shadowThief', 'poisonVine', 'madPilgrim'];
-export const ELITE_ENEMY_IDS = ['stoneSentinel', 'witheredJudge'];
-export const BOSS_ENEMY_ID = 'lordOfSpire';
+export const ACT_POOLS = {
+  1: {
+    normal: ['ashWolf', 'rottedKnight', 'thornGolem', 'shadowThief', 'poisonVine', 'madPilgrim'],
+    elite: ['stoneSentinel', 'witheredJudge'],
+    boss: 'lordOfSpire',
+    pairId: 'shadowThief',
+  },
+  2: {
+    normal: ['boneReaper', 'crimsonHound', 'ironWraith', 'twinBlades', 'ashScholar', 'ragingBrute'],
+    elite: ['voidSentinel', 'plagueBringer'],
+    boss: 'theHollowKing',
+    pairId: 'twinBlades',
+  },
+  3: {
+    normal: ['obsidianGolem', 'soulReaver', 'infernoWisp', 'ashenSpawn', 'witheredPriest', 'ragingWraith'],
+    elite: ['twinTyrants', 'deathHarbinger'],
+    boss: 'theAshenSovereign',
+    pairId: 'infernoWisp',
+  },
+};
 
-export function rollNormalEncounter() {
+export function rollNormalEncounter(act = 1) {
+  const pool = ACT_POOLS[act] || ACT_POOLS[1];
   const roll = Math.random();
   if (roll < 0.5) {
-    return [pick(NORMAL_ENEMY_IDS)];
+    return [pick(pool.normal)];
   } else if (roll < 0.8) {
-    return [pick(NORMAL_ENEMY_IDS), pick(NORMAL_ENEMY_IDS)];
+    return [pick(pool.normal), pick(pool.normal)];
   }
-  return ['shadowThief', 'shadowThief'];
+  return [pool.pairId, pool.pairId];
 }
 
-export function rollEliteEncounter() {
-  return [pick(ELITE_ENEMY_IDS)];
+export function rollEliteEncounter(act = 1) {
+  const pool = ACT_POOLS[act] || ACT_POOLS[1];
+  return [pick(pool.elite)];
 }
 
-export function rollBossEncounter() {
-  return [BOSS_ENEMY_ID];
+export function rollBossEncounter(act = 1) {
+  const pool = ACT_POOLS[act] || ACT_POOLS[1];
+  return [pool.boss];
 }
 
 function pick(arr) {

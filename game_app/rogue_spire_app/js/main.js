@@ -1,20 +1,28 @@
 import {
   STARTER_DECK, makeCardInstance, cardDisplayName, cardDescription, cardCost,
-  cardType, cardTarget, rollCardRewards,
+  cardType, cardTarget, cardPrice, rollCardRewards,
 } from './cards.js';
 import { relicName, relicDesc, rollRelicReward, rollBossRelicReward } from './relics.js';
 import { rollNormalEncounter, rollEliteEncounter, rollBossEncounter } from './enemies.js';
 import { generateMap, getNode, availableNodeIds, FLOORS, SLOTS } from './map.js';
 import { CombatEngine } from './combat.js';
 import { loadMeta, saveMeta, loadRun, saveRun, clearRun, hasSavedRun } from './state.js';
+import { generateShopStock } from './shop.js';
+import { EVENT_DB, rollEvent } from './events.js';
 
 const el = id => document.getElementById(id);
-const screens = ['screen-title', 'screen-map', 'screen-combat', 'screen-reward', 'screen-relic', 'screen-rest', 'screen-gameover'];
+const screens = [
+  'screen-title', 'screen-map', 'screen-combat', 'screen-reward', 'screen-relic', 'screen-rest',
+  'screen-gameover', 'screen-shop', 'screen-event', 'screen-actclear',
+];
+const TOTAL_ACTS = 3;
 
 let run = null;
 let combatEngine = null;
 let pendingNode = null;
 let selectedCardUid = null;
+let lastGoldGain = 0;
+let currentShopStock = null;
 
 const RELIC_ICONS = {
   ashenHeart: '💗', hardShell: '🛡️', markOfFury: '⚔️', swiftFeet: '🥾',
@@ -43,12 +51,26 @@ function createNewRun() {
     hp: 72,
     maxHp: 72,
     energyMax: 3,
+    gold: 99,
+    act: 1,
+    cardsRemoved: 0,
     deck: STARTER_DECK.map(id => makeCardInstance(id, false)),
     relics: ['ashenHeart'],
     map: generateMap(),
     currentNodeId: null,
     floorReached: 0,
   };
+}
+
+function absoluteFloor(node) {
+  return (run.act - 1) * (FLOORS + 1) + node.floor;
+}
+
+function rollGoldReward(nodeType) {
+  const scale = 1 + (run.act - 1) * 0.4;
+  if (nodeType === 'boss') return Math.round((75 + Math.floor(Math.random() * 26)) * scale);
+  if (nodeType === 'elite') return Math.round((25 + Math.floor(Math.random() * 16)) * scale);
+  return Math.round((10 + Math.floor(Math.random() * 11)) * scale);
 }
 
 el('btnNewRun').addEventListener('click', () => {
@@ -61,6 +83,9 @@ el('btnNewRun').addEventListener('click', () => {
 el('btnContinue').addEventListener('click', () => {
   run = loadRun();
   if (!run) { renderTitle(); return; }
+  if (typeof run.gold !== 'number') run.gold = 99;
+  if (typeof run.act !== 'number') run.act = 1;
+  if (typeof run.cardsRemoved !== 'number') run.cardsRemoved = 0;
   goToMap();
 });
 
@@ -84,6 +109,7 @@ function nodePixelPos(node) {
 
 function renderMap() {
   el('mapHpText').textContent = `${run.hp}/${run.maxHp}`;
+  el('mapGoldText').textContent = run.gold;
   el('relicRow').innerHTML = run.relics.map(id =>
     `<div class="relic-icon" title="${relicName(id)}: ${relicDesc(id)}">${RELIC_ICONS[id] || '❔'}</div>`
   ).join('');
@@ -111,7 +137,7 @@ function renderMap() {
   }
   svg.innerHTML = lines;
 
-  const typeIcon = { battle: '⚔️', elite: '💀', rest: '🔥', boss: '👑' };
+  const typeIcon = { battle: '⚔️', elite: '💀', rest: '🔥', shop: '🏪', event: '❓', boss: '👑' };
   let nodesHtml = '';
   for (const node of map.nodes) {
     const { x, y } = nodePixelPos(node);
@@ -135,23 +161,40 @@ function renderMap() {
 
 function enterNode(node) {
   pendingNode = node;
-  run.floorReached = Math.max(run.floorReached, node.floor);
-  if (node.type === 'battle') startCombatForNode(rollNormalEncounter());
-  else if (node.type === 'elite') startCombatForNode(rollEliteEncounter());
-  else if (node.type === 'boss') startCombatForNode(rollBossEncounter());
+  run.floorReached = Math.max(run.floorReached, absoluteFloor(node));
+  if (node.type === 'battle') startCombatForNode(rollNormalEncounter(run.act));
+  else if (node.type === 'elite') startCombatForNode(rollEliteEncounter(run.act));
+  else if (node.type === 'boss') startCombatForNode(rollBossEncounter(run.act));
   else if (node.type === 'rest') showRestScreen();
+  else if (node.type === 'shop') showShopScreen();
+  else if (node.type === 'event') showEventScreen();
 }
 
 function finishNode(node) {
   node.visited = true;
   run.currentNodeId = node.id;
-  run.floorReached = Math.max(run.floorReached, node.floor);
+  run.floorReached = Math.max(run.floorReached, absoluteFloor(node));
   if (node.type === 'boss') {
-    handleVictory();
+    if (run.act < TOTAL_ACTS) handleActClear();
+    else handleVictory();
     return;
   }
   saveRun(run);
   goToMap();
+}
+
+function handleActClear() {
+  const clearedAct = run.act;
+  run.act += 1;
+  const missing = run.maxHp - run.hp;
+  run.hp = Math.min(run.maxHp, run.hp + Math.round(missing * 0.5));
+  run.map = generateMap();
+  run.currentNodeId = null;
+  saveRun(run);
+  showScreen('screen-actclear');
+  el('actClearTitle').textContent = `第${clearedAct}層を制覇した!`;
+  el('actClearText').textContent = `力尽きかけた体を休め、HPが一部回復した。第${run.act}層へ向かう準備をしよう。`;
+  el('btnNextAct').onclick = () => goToMap();
 }
 
 // ---------- Combat ----------
@@ -316,6 +359,8 @@ function checkCombatEnd() {
 // ---------- Rewards ----------
 function handleCombatWin() {
   const node = pendingNode;
+  lastGoldGain = rollGoldReward(node.type);
+  run.gold += lastGoldGain;
   if (node.type === 'elite' || node.type === 'boss') {
     const relicId = node.type === 'boss' ? rollBossRelicReward(run.relics) : rollRelicReward(run.relics);
     if (relicId) {
@@ -341,6 +386,8 @@ function showRelicScreen(relicId) {
 
 function showCardRewardScreen() {
   showScreen('screen-reward');
+  el('goldGainText').textContent = lastGoldGain > 0 ? `💰 ${lastGoldGain} ゴールドを獲得した` : '';
+  lastGoldGain = 0;
   const options = rollCardRewards(3);
   el('rewardCards').innerHTML = options.map(inst => `
     <div class="card reward-card type-${cardType(inst)}" data-uid="${inst.uid}">
@@ -393,6 +440,132 @@ function showRestScreen() {
       });
     });
   };
+}
+
+// ---------- Shop ----------
+const RELIC_PRICE = 150;
+
+function showShopScreen() {
+  currentShopStock = generateShopStock(run);
+  renderShop();
+}
+
+function renderShop() {
+  showScreen('screen-shop');
+  el('shopGoldText').textContent = run.gold;
+
+  el('shopCards').innerHTML = currentShopStock.cards.map(inst => {
+    const price = cardPrice(inst);
+    const affordable = run.gold >= price;
+    return `<div class="card reward-card type-${cardType(inst)}${affordable ? '' : ' unaffordable-price'}" data-uid="${inst.uid}">
+      <div class="card-cost">${cardCost(inst)}</div>
+      <div class="card-name">${cardDisplayName(inst)}</div>
+      <div class="card-type-tag">${typeLabel(cardType(inst))}</div>
+      <div class="card-desc">${cardDescription(inst)}</div>
+      <div class="shop-item-price">💰${price}</div>
+    </div>`;
+  }).join('');
+  el('shopCards').querySelectorAll('.card').forEach(cardEl => {
+    cardEl.addEventListener('click', () => {
+      const uid = Number(cardEl.dataset.uid);
+      const inst = currentShopStock.cards.find(c => c.uid === uid);
+      if (!inst) return;
+      const price = cardPrice(inst);
+      if (run.gold < price) return;
+      run.gold -= price;
+      run.deck.push(inst);
+      currentShopStock.cards = currentShopStock.cards.filter(c => c.uid !== uid);
+      renderShop();
+    });
+  });
+
+  const relicWrap = el('shopRelicWrap');
+  if (currentShopStock.relicId) {
+    const relicId = currentShopStock.relicId;
+    const affordable = run.gold >= RELIC_PRICE;
+    relicWrap.innerHTML = `
+      <div class="relic-reward-card">
+        <div class="r-icon">${RELIC_ICONS[relicId] || '❔'}</div>
+        <div class="r-name">${relicName(relicId)}</div>
+        <div class="r-desc">${relicDesc(relicId)}</div>
+        <div class="shop-item-price">💰${RELIC_PRICE}</div>
+      </div>
+      <button id="btnBuyRelic" class="btn ${affordable ? 'btn-primary' : 'btn-ghost'}" ${affordable ? '' : 'disabled'}>遺物を買う</button>
+    `;
+    el('btnBuyRelic').onclick = () => {
+      if (run.gold < RELIC_PRICE) return;
+      run.gold -= RELIC_PRICE;
+      run.relics.push(relicId);
+      currentShopStock.relicId = null;
+      renderShop();
+    };
+  } else {
+    relicWrap.innerHTML = '';
+  }
+
+  const canRemove = run.deck.length > 5 && run.gold >= currentShopStock.removalPrice;
+  el('btnShopRemove').textContent = `カードを1枚削除する (💰${currentShopStock.removalPrice})`;
+  el('btnShopRemove').disabled = !canRemove;
+  el('shopRemoveList').classList.add('hidden');
+  el('shopRemoveList').innerHTML = '';
+  el('btnShopRemove').onclick = () => {
+    const list = el('shopRemoveList');
+    list.classList.remove('hidden');
+    list.innerHTML = run.deck.map(inst => `
+      <div class="card deck-card type-${cardType(inst)}" data-uid="${inst.uid}">
+        <div class="card-cost">${cardCost(inst)}</div>
+        <div class="card-name">${cardDisplayName(inst)}</div>
+        <div class="card-type-tag">${typeLabel(cardType(inst))}</div>
+        <div class="card-desc">${cardDescription(inst)}</div>
+      </div>
+    `).join('');
+    list.querySelectorAll('.card').forEach(cardEl => {
+      cardEl.addEventListener('click', () => {
+        if (run.gold < currentShopStock.removalPrice) return;
+        const uid = Number(cardEl.dataset.uid);
+        run.gold -= currentShopStock.removalPrice;
+        run.deck = run.deck.filter(c => c.uid !== uid);
+        run.cardsRemoved = (run.cardsRemoved || 0) + 1;
+        currentShopStock.removalPrice = 75 + 25 * run.cardsRemoved;
+        renderShop();
+      });
+    });
+  };
+
+  el('btnLeaveShop').onclick = () => finishNode(pendingNode);
+}
+
+// ---------- Event ----------
+function showEventScreen() {
+  const eventId = rollEvent();
+  const def = EVENT_DB[eventId];
+  showScreen('screen-event');
+  el('eventTitle').textContent = def.title;
+  el('eventText').textContent = def.text;
+  el('eventResult').classList.add('hidden');
+  el('eventResult').textContent = '';
+  el('btnEventContinue').classList.add('hidden');
+
+  const choicesEl = el('eventChoices');
+  choicesEl.innerHTML = '';
+  choicesEl.classList.remove('hidden');
+  def.choices.forEach(choice => {
+    const btn = document.createElement('button');
+    const enabled = choice.canApply ? choice.canApply(run) : true;
+    btn.className = `btn ${enabled ? 'btn-primary' : 'btn-ghost'}`;
+    btn.textContent = choice.label;
+    btn.disabled = !enabled;
+    btn.addEventListener('click', () => {
+      const resultText = choice.apply(run);
+      choicesEl.classList.add('hidden');
+      el('eventResult').textContent = resultText;
+      el('eventResult').classList.remove('hidden');
+      el('btnEventContinue').classList.remove('hidden');
+    });
+    choicesEl.appendChild(btn);
+  });
+
+  el('btnEventContinue').onclick = () => finishNode(pendingNode);
 }
 
 // ---------- Game over / victory ----------

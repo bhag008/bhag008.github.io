@@ -33,6 +33,10 @@
         <span class="hp-icon">♥</span>
         <span id="mapHpText">0/0</span>
       </div>
+      <div class="player-chip">
+        <span class="gold-icon">💰</span>
+        <span id="mapGoldText">0</span>
+      </div>
       <div id="relicRow" class="relic-row"></div>
       <div class="topbar-actions">
         <button id="btnViewDeck" class="btn btn-small">デッキ</button>
@@ -71,6 +75,7 @@
   <section id="screen-reward" class="screen hidden">
     <div class="reward-wrap">
       <h2>カード報酬</h2>
+      <p id="goldGainText" class="reward-hint"></p>
       <p class="reward-hint">1枚選んでデッキに加える</p>
       <div id="rewardCards" class="reward-cards"></div>
       <button id="btnSkipReward" class="btn btn-ghost">受け取らない</button>
@@ -102,6 +107,36 @@
       <h2 id="gameoverTitle">力尽きた…</h2>
       <p id="gameoverStats" class="reward-hint"></p>
       <button id="btnBackToTitle" class="btn btn-primary">タイトルへ戻る</button>
+    </div>
+  </section>
+
+  <section id="screen-shop" class="screen hidden">
+    <div class="shop-wrap">
+      <h2>行商人</h2>
+      <p class="reward-hint">所持金: <span id="shopGoldText">0</span>💰</p>
+      <div id="shopCards" class="reward-cards"></div>
+      <div id="shopRelicWrap" class="shop-relic-wrap"></div>
+      <button id="btnShopRemove" class="btn btn-ghost">カードを1枚削除する</button>
+      <button id="btnLeaveShop" class="btn btn-primary">立ち去る</button>
+      <div id="shopRemoveList" class="upgrade-list hidden"></div>
+    </div>
+  </section>
+
+  <section id="screen-event" class="screen hidden">
+    <div class="reward-wrap">
+      <h2 id="eventTitle">イベント</h2>
+      <p id="eventText" class="reward-hint"></p>
+      <div id="eventChoices" class="event-choices"></div>
+      <p id="eventResult" class="event-result hidden"></p>
+      <button id="btnEventContinue" class="btn btn-primary hidden">つぎへ</button>
+    </div>
+  </section>
+
+  <section id="screen-actclear" class="screen hidden">
+    <div class="reward-wrap">
+      <h2 id="actClearTitle">第1層を制覇した!</h2>
+      <p id="actClearText" class="reward-hint"></p>
+      <button id="btnNextAct" class="btn btn-primary">次の層へ</button>
     </div>
   </section>
 

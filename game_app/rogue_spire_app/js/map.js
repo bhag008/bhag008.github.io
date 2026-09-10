@@ -46,15 +46,21 @@ export function generateMap() {
   for (let s = 0; s < SLOTS; s++) byFloorSlot[`${FLOORS - 1}-${s}`].type = 'rest';
 
   let eliteCount = 0;
+  let shopCount = 0;
   for (let f = 1; f < FLOORS - 1; f++) {
     for (let s = 0; s < SLOTS; s++) {
       const node = byFloorSlot[`${f}-${s}`];
       const roll = Math.random();
-      if (roll < 0.18) {
+      if (roll < 0.15) {
         node.type = 'elite';
         eliteCount++;
-      } else if (roll < 0.35) {
+      } else if (roll < 0.27) {
         node.type = 'rest';
+      } else if (roll < 0.37) {
+        node.type = 'shop';
+        shopCount++;
+      } else if (roll < 0.55) {
+        node.type = 'event';
       } else {
         node.type = 'battle';
       }
@@ -63,6 +69,11 @@ export function generateMap() {
   if (eliteCount === 0) {
     const midFloor = Math.floor(FLOORS / 2);
     byFloorSlot[`${midFloor}-${Math.floor(SLOTS / 2)}`].type = 'elite';
+  }
+  if (shopCount === 0) {
+    const shopFloor = Math.max(1, Math.floor(FLOORS / 3));
+    const target = byFloorSlot[`${shopFloor}-${Math.min(SLOTS - 1, 2)}`];
+    if (target.type !== 'elite') target.type = 'shop';
   }
 
   return { nodes, floors: FLOORS };

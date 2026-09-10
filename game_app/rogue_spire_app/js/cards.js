@@ -102,7 +102,7 @@ const CARD_DB = {
   },
   fieldMedic: {
     name: '応急手当', type: 'skill', cost: 1, rarity: 'common', target: 'self',
-    values: { heal: 6 }, upgradedValues: { heal: 9 },
+    values: { heal: 4 }, upgradedValues: { heal: 7 },
     desc: v => `HPを${v.heal}回復する。`,
     effects: v => [{ type: 'heal', amount: v.heal }],
   },
@@ -128,7 +128,7 @@ const CARD_DB = {
   },
   drainStrike: {
     name: '吸血の刃', type: 'attack', cost: 2, rarity: 'uncommon', target: 'enemy',
-    values: { dmg: 10, heal: 5 }, upgradedValues: { dmg: 13, heal: 7 },
+    values: { dmg: 10, heal: 3 }, upgradedValues: { dmg: 13, heal: 5 },
     desc: v => `敵に${v.dmg}ダメージ。自身のHPを${v.heal}回復する。`,
     effects: v => [{ type: 'damage', amount: v.dmg }, { type: 'heal', amount: v.heal }],
   },
@@ -203,7 +203,7 @@ const CARD_DB = {
   },
   secondWind: {
     name: '不屈の闘志', type: 'skill', cost: 2, rarity: 'rare', target: 'self',
-    values: { heal: 14, energy: 1 }, upgradedValues: { heal: 20, energy: 1 },
+    values: { heal: 10, energy: 1 }, upgradedValues: { heal: 15, energy: 1 },
     desc: v => `HPを${v.heal}回復し、エナジーを${v.energy}獲得する。`,
     effects: v => [{ type: 'heal', amount: v.heal }, { type: 'energy', amount: v.energy }],
   },
@@ -218,6 +218,12 @@ export function getCardDef(id) {
 
 export function allRewardEligibleIds() {
   return Object.keys(CARD_DB).filter(id => CARD_DB[id].rarity !== 'basic');
+}
+
+export function randomCardIdByRarity(rarity) {
+  const pool = Object.keys(CARD_DB).filter(id => CARD_DB[id].rarity === rarity);
+  if (pool.length === 0) return null;
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 export function makeCardInstance(id, upgraded = false) {
@@ -260,6 +266,11 @@ export function cardExhaustsSelf(instance) {
 }
 
 const RARITY_WEIGHTS = { common: 60, uncommon: 30, rare: 10 };
+export const RARITY_PRICE = { common: 50, uncommon: 80, rare: 150 };
+
+export function cardPrice(instance) {
+  return RARITY_PRICE[getCardDef(instance.defId).rarity] || 50;
+}
 
 export function rollCardRewards(count, existingUpgradeableCheck) {
   const pool = allRewardEligibleIds();
