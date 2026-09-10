@@ -183,6 +183,8 @@ export const EXPANSION_CARDS = {
     { id: "ev_c6", name: "深き契約", emoji: "🖤", cost: 2, type: "spell", rarity: "common", set: "evolution", text: "自分に1ダメージを与え、カードを2枚引く", effect: { type: "self_damage_draw", damage: 1, draw: 2, target: "none" } },
     { id: "ev_c7", name: "猛竜への進化", emoji: "💪🐲", cost: 3, type: "minion", atk: 4, hp: 4, keywords: [], race: "dragon", rarity: "common", set: "evolution", evolve: { race: "dragon" }, text: "進化－竜：自分の竜1体の上に進化させて場に出す（召喚酔いなし）" },
     { id: "ev_c8", name: "悪鬼への進化", emoji: "💪👹", cost: 3, type: "minion", atk: 4, hp: 3, keywords: [], race: "demon", rarity: "common", set: "evolution", evolve: { race: "demon" }, text: "進化－悪魔：自分のデーモン1体の上に進化させて場に出す（召喚酔いなし）" },
+    { id: "ev_c9", name: "双竜の巣", emoji: "🥚🥚", cost: 3, type: "spell", rarity: "common", set: "evolution", text: "2/1の竜のひなを2体呼び出す", effect: { type: "summon_token", token: "dragon_whelp_token", count: 2, target: "none" } },
+    { id: "ev_c10", name: "火吹きの幼竜", emoji: "🔥🐲", cost: 1, type: "minion", atk: 1, hp: 1, keywords: ["charge"], race: "dragon", rarity: "common", set: "evolution", text: "速攻。戦場に出た時: 敵に1ダメージ", battlecry: { type: "damage", value: 1, target: "enemy_face" } },
     // rare
     { id: "ev_r1", name: "竜語りの守護者", emoji: "🧎‍♂️", cost: 3, type: "minion", atk: 3, hp: 5, keywords: ["taunt"], race: "dragon", rarity: "rare", set: "evolution", text: "挑発" },
     { id: "ev_r2", name: "悪魔の眷属", emoji: "👹", cost: 3, type: "spell", rarity: "rare", set: "evolution", text: "2/2の眷属悪魔を2体呼び出す", effect: { type: "summon_token", token: "hellspawn_token", count: 2, target: "none" } },
