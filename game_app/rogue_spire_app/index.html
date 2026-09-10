@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>灰の塔</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#121018">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="灰の塔">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+
+  <section id="screen-title" class="screen">
+    <div class="title-wrap">
+      <h1 class="game-title">灰の塔</h1>
+      <p class="game-sub">ASHEN SPIRE — ひとり用ローグライク・デッキ構築ゲーム</p>
+      <div id="metaStats" class="meta-stats"></div>
+      <div class="title-buttons">
+        <button id="btnContinue" class="btn btn-primary hidden">つづきから</button>
+        <button id="btnNewRun" class="btn btn-primary">新しいランを始める</button>
+      </div>
+      <p class="title-hint">デッキを育て、灰塔の頂を目指せ。倒れれば最初から。</p>
+    </div>
+  </section>
+
+  <section id="screen-map" class="screen hidden">
+    <header class="topbar">
+      <div class="player-chip">
+        <span class="hp-icon">♥</span>
+        <span id="mapHpText">0/0</span>
+      </div>
+      <div id="relicRow" class="relic-row"></div>
+      <div class="topbar-actions">
+        <button id="btnViewDeck" class="btn btn-small">デッキ</button>
+      </div>
+    </header>
+    <div id="mapScroll" class="map-scroll">
+      <svg id="mapSvg" class="map-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="mapNodes" class="map-nodes"></div>
+    </div>
+  </section>
+
+  <section id="screen-combat" class="screen hidden">
+    <header class="topbar">
+      <div class="player-chip">
+        <span class="hp-icon">♥</span>
+        <span id="combatHpText">0/0</span>
+      </div>
+      <div id="combatBuffRow" class="buff-row"></div>
+      <button id="btnCombatDeckInfo" class="btn btn-small">山札</button>
+    </header>
+    <div id="enemyRow" class="enemy-row"></div>
+    <div class="combat-mid">
+      <div class="pile-info">
+        <span id="drawCount" class="pile-chip">山 0</span>
+        <span id="discardCount" class="pile-chip">捨 0</span>
+        <span id="exhaustCount" class="pile-chip">消 0</span>
+      </div>
+      <button id="btnEndTurn" class="btn btn-primary">ターン終了</button>
+      <div class="energy-display">
+        <span id="energyText">0/0</span> <span class="energy-label">エナジー</span>
+      </div>
+    </div>
+    <div id="handRow" class="hand-row"></div>
+  </section>
+
+  <section id="screen-reward" class="screen hidden">
+    <div class="reward-wrap">
+      <h2>カード報酬</h2>
+      <p class="reward-hint">1枚選んでデッキに加える</p>
+      <div id="rewardCards" class="reward-cards"></div>
+      <button id="btnSkipReward" class="btn btn-ghost">受け取らない</button>
+    </div>
+  </section>
+
+  <section id="screen-relic" class="screen hidden">
+    <div class="reward-wrap">
+      <h2>遺物を手に入れた</h2>
+      <div id="relicRewardCard" class="relic-reward-card"></div>
+      <button id="btnTakeRelic" class="btn btn-primary">つぎへ</button>
+    </div>
+  </section>
+
+  <section id="screen-rest" class="screen hidden">
+    <div class="reward-wrap">
+      <h2>休憩所</h2>
+      <p class="reward-hint">安全な場所で一息つける</p>
+      <div class="rest-buttons">
+        <button id="btnRestHeal" class="btn btn-primary">休息する (HP回復)</button>
+        <button id="btnRestUpgrade" class="btn btn-primary">カードを強化する</button>
+      </div>
+      <div id="restUpgradeList" class="upgrade-list hidden"></div>
+    </div>
+  </section>
+
+  <section id="screen-gameover" class="screen hidden">
+    <div class="reward-wrap">
+      <h2 id="gameoverTitle">力尽きた…</h2>
+      <p id="gameoverStats" class="reward-hint"></p>
+      <button id="btnBackToTitle" class="btn btn-primary">タイトルへ戻る</button>
+    </div>
+  </section>
+
+  <div id="deckModal" class="modal hidden">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h3 id="deckModalTitle">デッキ</h3>
+        <button id="btnCloseDeckModal" class="btn btn-small">閉じる</button>
+      </div>
+      <div id="deckModalList" class="deck-modal-list"></div>
+    </div>
+  </div>
+
+  <div id="targetHint" class="target-hint hidden">敵をタップして対象を選択</div>
+
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

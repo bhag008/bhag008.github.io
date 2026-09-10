@@ -1,0 +1,10 @@
+{
+  "name": "灰の塔",
+  "short_name": "灰の塔",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#121018",
+  "theme_color": "#121018",
+  "orientation": "portrait"
+}
