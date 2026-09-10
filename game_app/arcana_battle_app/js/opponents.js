@@ -96,6 +96,42 @@ export const OPPONENTS = [
       "fl_l2", "ab_e3", "fl_e3", "std_healspring", "fl_r1",
     ],
   },
+  {
+    id: "dragon_lord",
+    level: 7,
+    name: "古龍神ヴォルカドラゴン",
+    emoji: "🌋🐲",
+    description: "進化の秘伝書の竜の頂点に立つ古龍神本人。安価な竜を並べては即座に進化させ、召喚酔いなしの大型ボディで畳みかける。",
+    winGold: 85,
+    loseGold: 15,
+    deck: [
+      "ev_c1", "ev_c1", "ev_c10", "ev_c10", "std_spark", "std_spark",
+      "fl_c3", "fl_c3", "ev_c3", "ev_c3", "ev_c5", "ev_c5",
+      "ev_r1", "ev_r1", "ev_c7", "ev_c7", "ev_c9", "ev_c9",
+      "ev_r5", "ev_r5", "ev_r3", "ev_r3",
+      "std_dragonet", "std_dragonet", "fl_r6", "fl_r6",
+      "ev_e3", "ev_e3",
+      "ev_l1", "ev_l1",
+    ],
+  },
+  {
+    id: "demon_lord",
+    level: 8,
+    name: "深淵の始祖ネクロズアリオン",
+    emoji: "🕳️👹",
+    description: "進化の秘伝書の深淵に潜む始祖本人。トークンと安価なデーモンで盤面を素早く作り、進化でまとめて刈り取る。",
+    winGold: 80,
+    loseGold: 14,
+    deck: [
+      "ev_c2", "ev_c2", "ab_c1", "ab_c1", "std_spark", "std_spark",
+      "ab_c2", "ab_c2", "ev_c4", "ev_c4", "ab_c3", "ab_c3",
+      "ev_c8", "ev_c8", "ev_r2", "ev_r2", "std_raider", "std_raider",
+      "ab_c8", "ab_c8", "ev_r6", "ev_r6", "ev_r3", "ev_r3",
+      "ab_r6", "ab_r6",
+      "ev_e4", "ev_e4",
+      "ev_l2", "ev_l2",
+    ],
+  },
 ];
 
 export function getOpponent(id) {
