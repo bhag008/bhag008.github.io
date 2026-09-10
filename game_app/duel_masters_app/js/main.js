@@ -1,7 +1,7 @@
 // 画面遷移とDOM描画、ユーザー操作のワイヤリング
 import {
   getCard, cardsByCivilization, CIVILIZATIONS, isBlocker, isDoubleBreaker,
-  hasShieldTrigger, cardEffects, validateDeck, DECK_MIN_SIZE, MAX_COPIES,
+  hasShieldTrigger, validateDeck, DECK_MIN_SIZE, MAX_COPIES,
 } from './cards.js';
 import { DuelEngine } from './engine.js';
 import { cpuTurnSteps, chooseBlockForCPU, autoResolveShieldTriggers } from './ai.js';
@@ -53,6 +53,43 @@ function promptChoice(title, options, onPick) {
   }
   wrap.appendChild(list);
   openModal(wrap);
+}
+
+// ---------------- 対象選択の共通処理 ----------------
+// spec.kind別に、候補uidが属するゾーンからカード名ラベルを組み立てる
+function labelForCandidate(side, kind, uid) {
+  const opp = engine.opponent(side);
+  let inst = null;
+  if (kind === 'enemyCreature') inst = engine.players[opp].battle.find((c) => c.uid === uid);
+  else if (kind === 'ownCreature') inst = engine.players[side].battle.find((c) => c.uid === uid);
+  else if (kind === 'anyCreature') inst = engine.players.player.battle.find((c) => c.uid === uid) || engine.players.cpu.battle.find((c) => c.uid === uid);
+  else if (kind === 'ownGraveyardCreature') inst = engine.players[side].graveyard.find((c) => c.uid === uid);
+  else if (kind === 'ownHandCard') inst = engine.players[side].hand.find((c) => c.uid === uid);
+  else if (kind === 'deckTutor') inst = engine.players[side].deck.find((c) => c.uid === uid);
+  if (!inst) return '(不明なカード)';
+  const d = getCard(inst.cardId);
+  return `${d.name}${d.power != null ? ` (P${d.power})` : ''}`;
+}
+
+// spec: {kind, min, max, filter} に従い、min〜max件選ばせてから onComplete(uids) を呼ぶ
+function promptTargetSelection(side, spec, onComplete) {
+  const min = spec.min ?? 0;
+  const max = spec.max ?? 1;
+  const chosen = [];
+  function step() {
+    const remaining = (engine.getTargetCandidates(side, spec) || []).filter((uid) => !chosen.includes(uid));
+    if (remaining.length === 0 || chosen.length >= max) { closeModal(); onComplete(chosen); return; }
+    const options = remaining.map((uid) => ({ label: labelForCandidate(side, spec.kind, uid), value: uid }));
+    if (chosen.length >= min) options.push({ label: `これで決定(${chosen.length}件選択中)`, value: '__done__' });
+    promptChoice(`対象を選択${max > 1 ? `(最大${max}件)` : ''}`, options, (val) => {
+      if (val === '__done__') { closeModal(); onComplete(chosen); return; }
+      chosen.push(val);
+      step();
+    });
+  }
+  const initial = engine.getTargetCandidates(side, spec) || [];
+  if (initial.length === 0) { onComplete([]); return; }
+  step();
 }
 
 // ---------------- タイトル ----------------
@@ -127,20 +164,26 @@ function countInDeck(cardId) {
   return editingDeck.cardIds.filter((id) => id === cardId).length;
 }
 
-function cardMiniCard(def, count) {
-  const div = document.createElement('div');
-  div.className = 'mini-card civ-' + def.civ;
+function keywordBadges(def) {
   const kw = [];
   if (isBlocker(def)) kw.push('B');
   if (isDoubleBreaker(def)) kw.push('W');
   if (hasShieldTrigger(def)) kw.push('S');
+  if (def.keywords?.slayer) kw.push('SL');
+  return kw;
+}
+
+function cardMiniCard(def, count) {
+  const div = document.createElement('div');
+  div.className = 'mini-card civ-' + def.civ;
+  const kw = keywordBadges(def);
   div.innerHTML = `
     <div class="mini-card-top">
       <span class="mini-cost">${def.cost}</span>
       <span class="mini-name">${escapeHtml(def.name)}</span>
       ${def.power != null ? `<span class="mini-power">P${def.power}</span>` : ''}
     </div>
-    <div class="mini-card-mid">${def.type === 'creature' ? escapeHtml(def.race || '') : '呪文'} ${kw.map((k) => `<span class="badge badge-${k}">${k}</span>`).join('')}</div>
+    <div class="mini-card-mid">${def.type === 'creature' ? escapeHtml(def.race || '') : '呪文'} (${def.rarity}) ${kw.map((k) => `<span class="badge badge-${k}">${k}</span>`).join('')}</div>
     <div class="mini-card-text">${escapeHtml(def.text || '')}</div>
     ${count != null ? `<div class="mini-count">採用: ${count}枚</div>` : ''}
   `;
@@ -260,21 +303,20 @@ function civBadge(civ) {
   return `<span class="civ-tag" style="--civ-color:${CIVILIZATIONS[civ].color}">${CIVILIZATIONS[civ].name}</span>`;
 }
 
-function renderZoneCard(inst, opts = {}) {
+function renderZoneCard(side, inst, opts = {}) {
   const def = getCard(inst.cardId);
   const div = document.createElement('div');
   div.className = 'zone-card civ-' + def.civ;
   if (inst.tapped) div.classList.add('tapped');
   if (inst.sickness) div.classList.add('sick');
   if (opts.selected) div.classList.add('selected');
-  const kw = [];
-  if (isBlocker(def)) kw.push('B');
-  if (isDoubleBreaker(def)) kw.push('W');
-  if (hasShieldTrigger(def)) kw.push('S');
+  if (opts.attackable) div.classList.add('attackable');
+  const kw = keywordBadges(def);
+  const atkBonus = engine.powerWhileAttacking(side, inst) - engine.powerBase(side, inst);
   div.innerHTML = `
     <div class="zc-top">${civBadge(def.civ)}<span class="zc-cost">${def.cost}</span></div>
     <div class="zc-name">${escapeHtml(def.name)}</div>
-    <div class="zc-power">${def.power != null ? 'P' + def.power + (inst.turnBuff ? `+${inst.turnBuff}` : '') : ''}</div>
+    <div class="zc-power">${def.power != null ? 'P' + engine.powerBase(side, inst) + (atkBonus ? `(攻+${atkBonus})` : '') : ''}</div>
     <div class="zc-kw">${kw.map((k) => `<span class="badge badge-${k}">${k}</span>`).join('')}</div>
   `;
   if (opts.onClick) div.onclick = opts.onClick;
@@ -290,11 +332,16 @@ function renderBattle() {
   $('oppInfo').innerHTML = `CPU — シールド ${opp.shields.length} / 手札 ${opp.hand.length} / 山札 ${opp.deck.length} / 墓地 ${opp.graveyard.length}`;
   $('selfInfo').innerHTML = `あなた — シールド ${me.shields.length} / 山札 ${me.deck.length} / 墓地 ${me.graveyard.length} — ${myTurn ? 'あなたのターン' : 'CPUのターン'} (${engine.phase === 'main' ? 'メインフェーズ' : 'アタックフェーズ'})`;
 
+  const attackableEnemyUids = (myTurn && engine.phase === 'attack' && selectedAttackerUid)
+    ? engine.validCreatureAttackTargets('player', selectedAttackerUid)
+    : [];
+
   const oppBattle = $('oppBattleZone');
   oppBattle.innerHTML = '';
   for (const c of opp.battle) {
-    const canBeAttacked = myTurn && engine.phase === 'attack' && selectedAttackerUid;
-    oppBattle.appendChild(renderZoneCard(c, {
+    const canBeAttacked = attackableEnemyUids.includes(c.uid);
+    oppBattle.appendChild(renderZoneCard('cpu', c, {
+      attackable: canBeAttacked,
       onClick: canBeAttacked ? () => performAttack({ type: 'creature', uid: c.uid }) : null,
     }));
   }
@@ -303,8 +350,8 @@ function renderBattle() {
   const selfBattle = $('selfBattleZone');
   selfBattle.innerHTML = '';
   for (const c of me.battle) {
-    const eligible = !c.tapped && !c.sickness;
-    selfBattle.appendChild(renderZoneCard(c, {
+    const eligible = !c.tapped && !c.sickness && engine.canAttackAtAll(c);
+    selfBattle.appendChild(renderZoneCard('player', c, {
       selected: c.uid === selectedAttackerUid,
       onClick: (myTurn && engine.phase === 'attack' && eligible) ? () => selectAttacker(c.uid) : null,
     }));
@@ -322,10 +369,7 @@ function renderBattle() {
     div.className = 'hand-card civ-' + def.civ;
     const affordable = engine.canPayCost('player', def);
     if (!myTurn || engine.phase !== 'main') div.classList.add('disabled');
-    const kw = [];
-    if (isBlocker(def)) kw.push('B');
-    if (isDoubleBreaker(def)) kw.push('W');
-    if (hasShieldTrigger(def)) kw.push('S');
+    const kw = keywordBadges(def);
     div.innerHTML = `
       <div class="zc-top">${civBadge(def.civ)}<span class="zc-cost">${def.cost}</span></div>
       <div class="zc-name">${escapeHtml(def.name)}</div>
@@ -353,46 +397,39 @@ function renderBattle() {
   $('btnEndTurn').disabled = !myTurn;
 }
 
-function buildCandidateLabels(side, def, uids) {
-  const opp = side === 'player' ? 'cpu' : 'player';
-  const eff = cardEffects(def).find((e) => ['destroy', 'bounce', 'returnFromGraveyard', 'buffPower'].includes(e.type));
-  let zone;
-  if (eff.type === 'destroy' || eff.type === 'bounce') zone = engine.players[opp].battle;
-  else if (eff.type === 'returnFromGraveyard') zone = engine.players[side].graveyard;
-  else zone = engine.players[side].battle;
-  return uids.map((uid) => {
-    const c = zone.find((x) => x.uid === uid);
-    const d = getCard(c.cardId);
-    return { uid, label: `${d.name}${d.power != null ? ` (P${d.power})` : ''}` };
-  });
-}
-
 function playHandCard(handUid) {
   const inst = engine.players.player.hand.find((c) => c.uid === handUid);
   if (!inst) return;
   const def = getCard(inst.cardId);
   if (!engine.canPayCost('player', def)) return;
+
   if (def.type === 'spell') {
-    const candidates = engine.getValidTargetUids('player', def);
-    if (candidates && candidates.length > 1) {
-      const labels = buildCandidateLabels('player', def, candidates);
-      promptChoice(`${def.name} の対象を選択`, labels.map((l) => ({ label: l.label, value: l.uid })), (uid) => {
-        engine.playCard('player', handUid, { targetUid: uid });
-        closeModal();
+    const spec = def.spell?.target;
+    if (spec) {
+      promptTargetSelection('player', spec, (uids) => {
+        engine.playCard('player', handUid, { targetUids: uids });
         renderBattle();
         checkGameOverAfterAction();
       });
       return;
     }
-    if (candidates && candidates.length === 1) {
-      engine.playCard('player', handUid, { targetUid: candidates[0] });
+    engine.playCard('player', handUid, {});
+    renderBattle();
+    checkGameOverAfterAction();
+    return;
+  }
+
+  const result = engine.playCard('player', handUid, {});
+  renderBattle();
+  if (result.awaitingCipTarget) {
+    const spec = engine.pendingCip.ability.target;
+    promptTargetSelection('player', spec, (uids) => {
+      engine.resolveCip(uids);
       renderBattle();
       checkGameOverAfterAction();
-      return;
-    }
+    });
+    return;
   }
-  engine.playCard('player', handUid, {});
-  renderBattle();
   checkGameOverAfterAction();
 }
 
@@ -421,7 +458,13 @@ function checkGameOverAfterAction() {
 }
 
 $('btnChargeMana').onclick = () => { manaChargeMode = !manaChargeMode; renderBattle(); };
-$('btnAttackPhase').onclick = () => { engine.enterAttackPhase(); renderBattle(); };
+$('btnAttackPhase').onclick = () => {
+  engine.enterAttackPhase();
+  engine.runForcedAttackers('player');
+  autoResolveShieldTriggers(engine, 'cpu');
+  renderBattle();
+  checkGameOverAfterAction();
+};
 $('btnAttackFace').onclick = () => performAttack({ type: 'player' });
 $('btnCancelSelection').onclick = () => { selectedAttackerUid = null; renderBattle(); };
 $('btnEndTurn').onclick = () => {
@@ -469,7 +512,7 @@ function offerPlayerBlock(onDone) {
   const blockers = pb.eligibleBlockers.map((uid) => engine.players.player.battle.find((c) => c.uid === uid)).filter(Boolean);
   const options = blockers.map((b) => {
     const d = getCard(b.cardId);
-    return { label: `${d.name} (P${d.power}) でブロックする`, value: b.uid };
+    return { label: `${d.name} (P${engine.powerBase('player', b)}) でブロックする`, value: b.uid };
   });
   options.push({ label: 'ブロックしない', value: null });
   promptChoice('相手が攻撃してきました。ブロックしますか?', options, (uid) => {
@@ -507,28 +550,20 @@ function offerShieldTrigger(item, onDone) {
 }
 
 function useShieldTrigger(item, def, onDone) {
-  const needsTarget = cardEffects(def).some((e) => ['destroy', 'bounce', 'returnFromGraveyard', 'buffPower'].includes(e.type));
-  if (needsTarget) {
-    const candidates = engine.getValidTargetUids(item.side, def);
-    if (!candidates || candidates.length === 0) {
-      closeModal(); engine.resolveShieldTrigger(true, null); renderBattle(); onDone(); return;
-    }
-    if (candidates.length === 1) {
-      closeModal(); engine.resolveShieldTrigger(true, candidates[0]); renderBattle(); onDone(); return;
-    }
-    const labels = buildCandidateLabels(item.side, def, candidates);
-    promptChoice(`${def.name} の対象を選択`, labels.map((l) => ({ label: l.label, value: l.uid })), (uid) => {
-      closeModal();
-      engine.resolveShieldTrigger(true, uid);
-      renderBattle();
-      onDone();
-    });
+  const ability = def.type === 'creature' ? def.onPlay : def.spell;
+  if (!ability || !ability.target) {
+    closeModal();
+    engine.resolveShieldTrigger(true, []);
+    renderBattle();
+    onDone();
     return;
   }
   closeModal();
-  engine.resolveShieldTrigger(true, null);
-  renderBattle();
-  onDone();
+  promptTargetSelection(item.side, ability.target, (uids) => {
+    engine.resolveShieldTrigger(true, uids);
+    renderBattle();
+    onDone();
+  });
 }
 
 // ---------------- 結果 ----------------

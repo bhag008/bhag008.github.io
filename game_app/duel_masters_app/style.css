@@ -90,6 +90,8 @@ h1, h2, h3 { margin: 0 0 8px; }
 .badge { display: inline-block; border-radius: 5px; padding: 1px 5px; font-size: 9.5px; font-weight: 700; margin-right: 3px; }
 .badge-B { background: #2c4a6e; color: #9cd0ff; }
 .badge-W { background: #6e2c2c; color: #ffb3b3; }
+.badge-SL { background: #3a3d52; color: #ff8a8a; }
+.zone-card.attackable { outline: 2px dashed var(--danger); cursor: pointer; }
 .badge-S { background: #6e5c2c; color: #ffe08a; }
 
 /* --- CPU select --- */
