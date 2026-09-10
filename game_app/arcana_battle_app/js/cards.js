@@ -18,7 +18,7 @@ export const TOKENS = {
   imp_token: { id: "imp_token", name: "小悪魔", emoji: "👹", atk: 1, hp: 1, keywords: [] },
   phoenix_ash_token: { id: "phoenix_ash_token", name: "不死の残り火", emoji: "🔥", atk: 1, hp: 1, keywords: [] },
   fairy_token: { id: "fairy_token", name: "妖精のかけら", emoji: "🧚", atk: 1, hp: 1, keywords: [], race: "fairy" },
-  dragon_whelp_token: { id: "dragon_whelp_token", name: "竜のひな", emoji: "🐲", atk: 2, hp: 1, keywords: [], race: "dragon" },
+  dragon_whelp_token: { id: "dragon_whelp_token", name: "竜のひな", emoji: "🐲", atk: 3, hp: 1, keywords: [], race: "dragon" },
   hellspawn_token: { id: "hellspawn_token", name: "眷属悪魔", emoji: "👹", atk: 2, hp: 2, keywords: [], race: "demon" },
 };
 
@@ -179,11 +179,11 @@ export const EXPANSION_CARDS = {
     { id: "ev_c2", name: "業火の子鬼", emoji: "👺", cost: 1, type: "minion", atk: 2, hp: 1, keywords: [], race: "demon", rarity: "common", set: "evolution", text: "" },
     { id: "ev_c3", name: "双角の若竜", emoji: "🐲", cost: 2, type: "minion", atk: 2, hp: 3, keywords: [], race: "dragon", rarity: "common", set: "evolution", text: "" },
     { id: "ev_c4", name: "契約の子悪魔", emoji: "👹", cost: 2, type: "minion", atk: 3, hp: 2, keywords: [], race: "demon", rarity: "common", set: "evolution", text: "" },
-    { id: "ev_c5", name: "竜の産声", emoji: "🐣", cost: 2, type: "spell", rarity: "common", set: "evolution", text: "2/1の竜のひなを1体呼び出す", effect: { type: "summon_token", token: "dragon_whelp_token", count: 1, target: "none" } },
+    { id: "ev_c5", name: "竜の産声", emoji: "🐣", cost: 2, type: "spell", rarity: "common", set: "evolution", text: "3/1の竜のひなを1体呼び出す", effect: { type: "summon_token", token: "dragon_whelp_token", count: 1, target: "none" } },
     { id: "ev_c6", name: "深き契約", emoji: "🖤", cost: 2, type: "spell", rarity: "common", set: "evolution", text: "自分に1ダメージを与え、カードを2枚引く", effect: { type: "self_damage_draw", damage: 1, draw: 2, target: "none" } },
     { id: "ev_c7", name: "猛竜への進化", emoji: "💪🐲", cost: 3, type: "minion", atk: 4, hp: 4, keywords: [], race: "dragon", rarity: "common", set: "evolution", evolve: { race: "dragon" }, text: "進化－竜：自分の竜1体の上に進化させて場に出す（召喚酔いなし）" },
     { id: "ev_c8", name: "悪鬼への進化", emoji: "💪👹", cost: 3, type: "minion", atk: 4, hp: 3, keywords: [], race: "demon", rarity: "common", set: "evolution", evolve: { race: "demon" }, text: "進化－悪魔：自分のデーモン1体の上に進化させて場に出す（召喚酔いなし）" },
-    { id: "ev_c9", name: "双竜の巣", emoji: "🥚🥚", cost: 3, type: "spell", rarity: "common", set: "evolution", text: "2/1の竜のひなを2体呼び出す", effect: { type: "summon_token", token: "dragon_whelp_token", count: 2, target: "none" } },
+    { id: "ev_c9", name: "双竜の巣", emoji: "🥚🥚", cost: 3, type: "spell", rarity: "common", set: "evolution", text: "3/1の竜のひなを2体呼び出す", effect: { type: "summon_token", token: "dragon_whelp_token", count: 2, target: "none" } },
     { id: "ev_c10", name: "火吹きの幼竜", emoji: "🔥🐲", cost: 1, type: "minion", atk: 1, hp: 1, keywords: ["charge"], race: "dragon", rarity: "common", set: "evolution", text: "速攻。戦場に出た時: 敵に1ダメージ", battlecry: { type: "damage", value: 1, target: "enemy_face" } },
     // rare
     { id: "ev_r1", name: "竜語りの守護者", emoji: "🧎‍♂️", cost: 3, type: "minion", atk: 3, hp: 5, keywords: ["taunt"], race: "dragon", rarity: "rare", set: "evolution", text: "挑発" },
