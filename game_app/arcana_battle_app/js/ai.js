@@ -173,7 +173,9 @@ function* cpuAttackPhaseSteps(game, side) {
 
       // 挑発しか攻撃できない場合: 単独で倒せなくても、まだ攻撃していない
       // 味方全体の攻撃力を合計すればこのターン中に倒し切れるなら集中攻撃する。
-      // それでも倒せないなら一方的に潰されるだけなので、攻撃せず温存する。
+      // ただし、自分を除いた他の未行動の味方だけで倒しきれるなら、自分は無駄死にせず温存する
+      // （例: 1/1が3体いても、後で殴る5/2だけで3/5を相打ちにできるなら1/1は参加しない）。
+      // 誰も参加しないと倒せない場合のみ、それでも倒せないなら一方的に潰されるだけなので攻撃せず温存する。
       if (!chosen && minionTargets.length) {
         const weakestTarget = [...minionTargets].sort((a, b) => {
           const da = game.players[enemy].board.find((m) => m.uid === a.uid);
@@ -182,7 +184,8 @@ function* cpuAttackPhaseSteps(game, side) {
         })[0];
         const weakestDefender = game.players[enemy].board.find((m) => m.uid === weakestTarget.uid);
         const remainingAtk = attackers.filter((a) => !a.attacked).reduce((s, a) => s + a.atk, 0);
-        if (weakestDefender && remainingAtk >= weakestDefender.hp) {
+        const othersAtk = remainingAtk - attacker.atk;
+        if (weakestDefender && remainingAtk >= weakestDefender.hp && othersAtk < weakestDefender.hp) {
           chosen = weakestTarget;
         }
       }
