@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>デュエルマスターズ 第1弾</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#12141c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="デュエルマスターズ">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+
+  <section id="screen-title" class="screen">
+    <div class="title-wrap">
+      <h1 class="game-title">デュエルマスターズ</h1>
+      <p class="game-sub">第1弾カードプール再現版(記憶ベースのベストエフォート) — ひとり用CPU対戦</p>
+      <div class="title-buttons">
+        <button id="btnPlay" class="btn btn-primary">対戦を始める</button>
+        <button id="btnDeckBuilder" class="btn">デッキを編成する</button>
+      </div>
+      <p id="titleHint" class="hint"></p>
+    </div>
+  </section>
+
+  <section id="screen-deckbuilder" class="screen hidden">
+    <header class="topbar">
+      <button id="btnBackFromDeckbuilder" class="btn btn-small">戻る</button>
+      <h2>デッキ編成</h2>
+    </header>
+    <div id="deckListPanel">
+      <div id="deckList" class="deck-list"></div>
+      <button id="btnNewDeck" class="btn btn-primary">新しいデッキを作成</button>
+    </div>
+    <div id="deckEditPanel" class="hidden">
+      <input id="deckNameInput" type="text" placeholder="デッキ名" class="deck-name-input">
+      <div id="deckCountDisplay" class="hint"></div>
+      <div id="deckValidationMsg" class="hint"></div>
+      <div id="civTabs" class="civ-tabs"></div>
+      <h3>カードプール</h3>
+      <div id="cardPoolList" class="card-pool-list"></div>
+      <h3>採用カード</h3>
+      <div id="deckCardList" class="card-pool-list"></div>
+      <div class="deck-edit-actions">
+        <button id="btnSaveDeck" class="btn btn-primary">保存</button>
+        <button id="btnDeleteDeck" class="btn btn-ghost hidden">削除</button>
+        <button id="btnCancelEditDeck" class="btn">キャンセル</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-cpuselect" class="screen hidden">
+    <header class="topbar">
+      <button id="btnBackFromCpuSelect" class="btn btn-small">戻る</button>
+      <h2>対戦相手を選ぶ</h2>
+    </header>
+    <div id="playerDeckSelect" class="select-wrap"></div>
+    <div id="cpuDeckSelect" class="select-wrap"></div>
+    <button id="btnStartDuel" class="btn btn-primary">対戦開始</button>
+  </section>
+
+  <section id="screen-battle" class="screen hidden">
+    <div id="oppInfo" class="player-info"></div>
+    <div id="oppBattleZone" class="zone battle-zone"></div>
+    <div id="oppManaZone" class="zone mana-zone"></div>
+    <div id="logPanel" class="log-panel"></div>
+    <div id="selfManaZone" class="zone mana-zone"></div>
+    <div id="selfBattleZone" class="zone battle-zone"></div>
+    <div id="selfInfo" class="player-info"></div>
+    <div id="actionBar" class="action-bar">
+      <button id="btnChargeMana" class="btn btn-small">マナチャージ</button>
+      <button id="btnAttackPhase" class="btn btn-small">アタックフェーズへ</button>
+      <button id="btnAttackFace" class="btn btn-small hidden">プレイヤーに攻撃</button>
+      <button id="btnCancelSelection" class="btn btn-small hidden">選択解除</button>
+      <button id="btnEndTurn" class="btn btn-primary btn-small">ターン終了</button>
+    </div>
+    <div id="handRow" class="hand-row"></div>
+  </section>
+
+  <section id="screen-result" class="screen hidden">
+    <div class="reward-wrap">
+      <h2 id="resultTitle"></h2>
+      <button id="btnResultToTitle" class="btn btn-primary">タイトルへ戻る</button>
+    </div>
+  </section>
+
+  <div id="modalOverlay" class="modal hidden">
+    <div class="modal-panel" id="modalPanel"></div>
+  </div>
+
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

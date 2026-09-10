@@ -36,6 +36,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8128", "--directory", "game_app/rogue_spire_app"],
       "port": 8128
+    },
+    {
+      "name": "duel_masters",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8129", "--directory", "game_app/duel_masters_app"],
+      "port": 8129
     }
   ]
 }
