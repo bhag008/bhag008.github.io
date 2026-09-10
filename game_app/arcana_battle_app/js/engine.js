@@ -287,6 +287,25 @@ function applyEffectOnly(game, side, effect, target, sourceUid) {
       }
       break;
     }
+    case "random_burst": {
+      for (let i = 0; i < effect.hits; i++) {
+        const board = game.players[enemy].board.filter((m) => m.hp > 0);
+        const pool = [...board.map((m) => ({ type: "minion", side: enemy, uid: m.uid })), { type: "face", side: enemy }];
+        const t = pool[Math.floor(Math.random() * pool.length)];
+        applyDamage(game, t, effect.value);
+      }
+      break;
+    }
+    case "damage_all_enemy_and_draw_per_kill": {
+      let kills = 0;
+      for (const m of [...game.players[enemy].board]) {
+        if (m.hp > 0 && m.hp <= effect.value) kills++;
+        applyDamage(game, { type: "minion", side: enemy, uid: m.uid }, effect.value);
+      }
+      for (let i = 0; i < kills; i++) drawCard(game, side);
+      if (kills > 0) addLog(game, `${kills}体を撃破し、カードを${kills}枚引いた`);
+      break;
+    }
     default:
       break;
   }
@@ -362,11 +381,17 @@ export function canPlayCard(game, side, handUid) {
   const card = getCard(item.cardId);
   if (!card) return false;
   if (getEffectiveCost(game, side, card) > p.mana.current) return false;
+  // 進化カードは既存ミニオンに重ねて場に出るため、盤面枠を新たに消費しない。
+  // 代わりに進化元となる同種族ミニオンが場にいることを要求する。
+  if (card.evolve) {
+    return p.board.some((m) => m.race === card.evolve.race);
+  }
   if (card.type === "minion" && p.board.length >= MAX_BOARD) return false;
   return true;
 }
 
 export function needsTarget(card) {
+  if (card.evolve) return true; // 進化元ミニオンの選択が必要
   const eff = card.type === "minion" ? card.battlecry : card.effect;
   return !!eff && (eff.target === "select" || eff.target === "select_monster");
 }
@@ -378,6 +403,40 @@ export function playCard(game, side, handUid, target) {
   const item = p.hand[idx];
   const card = getCard(item.cardId);
   if (!canPlayCard(game, side, handUid)) return false;
+
+  // 進化: 新しいミニオンを場に追加するのではなく、指定した進化元ミニオンを直接
+  // 書き換える（=盤面枠を消費しない）。デスラトルは発生させず、召喚酔いも無視する。
+  if (card.evolve) {
+    const base = target && target.type === "minion" && target.side === side
+      ? findMinion(game, side, target.uid)
+      : null;
+    if (!base || base.race !== card.evolve.race) return false;
+
+    p.mana.current -= getEffectiveCost(game, side, card);
+    p.hand.splice(idx, 1);
+
+    base.cardId = card.id;
+    base.name = card.name;
+    base.emoji = card.emoji;
+    base.atk = card.atk;
+    base.hp = card.hp;
+    base.maxHp = card.hp;
+    base.cost = card.cost;
+    base.rarity = card.rarity;
+    base.race = card.race;
+    base.text = card.text;
+    base.keywords = [...card.keywords];
+    base.sick = false;
+    addLog(game, `${side === "player" ? "あなた" : "相手"}が「${base.name}」に進化させた`);
+
+    if (card.battlecry) {
+      resolveEffect(game, side, card.battlecry, null, base.uid);
+    } else {
+      removeDeadMinions(game);
+      checkWin(game);
+    }
+    return true;
+  }
 
   p.mana.current -= getEffectiveCost(game, side, card);
   p.hand.splice(idx, 1);

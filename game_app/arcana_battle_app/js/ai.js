@@ -29,6 +29,20 @@ function chooseSpellTarget(game, side, effect) {
   return { type: "face", side: enemy };
 }
 
+// 進化させる元ミニオンを選ぶ: まだ攻撃していない個体を優先（進化後すぐ攻撃できるため）、
+// 同条件ならステータス合計が低い（=弱い）個体を優先して底上げする。
+function chooseEvolveTarget(game, side, race) {
+  const candidates = game.players[side].board.filter((m) => m.race === race);
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => {
+    const aReady = a.attacked ? 1 : 0;
+    const bReady = b.attacked ? 1 : 0;
+    if (aReady !== bReady) return aReady - bReady;
+    return (a.atk + a.hp) - (b.atk + b.hp);
+  });
+  return { type: "minion", side, uid: candidates[0].uid };
+}
+
 // 自身の場の頭数（同種族）に応じて強くなる「スケーリング」系の効果かどうか。
 // これらは場が育ってから使う方が価値が高いため、他に出せるカードがない時まで温存させる。
 function isScalerBattlecry(card) {
@@ -61,7 +75,7 @@ function* playCpuCardsSteps(game, side) {
     playedSomething = false;
     const playable = p.hand
       .map((h) => ({ h, card: getCard(h.cardId) }))
-      .filter(({ h, card }) => canPlayCard(game, side, h.uid) && (card.type !== "minion" || p.board.length < MAX_BOARD))
+      .filter(({ h, card }) => canPlayCard(game, side, h.uid) && (card.type !== "minion" || card.evolve || p.board.length < MAX_BOARD))
       .sort((a, b) => b.card.cost - a.card.cost);
     if (!playable.length) break;
 
@@ -82,7 +96,9 @@ function* playCpuCardsSteps(game, side) {
     }
     const { h, card } = choice;
     let target = null;
-    if (needsTarget(card)) {
+    if (card.evolve) {
+      target = chooseEvolveTarget(game, side, card.evolve.race);
+    } else if (needsTarget(card)) {
       const effect = card.type === "minion" ? card.battlecry : card.effect;
       target = chooseSpellTarget(game, side, effect);
     }

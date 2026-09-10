@@ -30,6 +30,7 @@ export function createCardEl(card, opts = {}) {
     ? `<div class="card-keywords">${card.keywords.map((k) => KEYWORD_LABEL[k] || k).join(" ")}</div>`
     : "";
   const raceLine = card.race ? `<div class="card-race">${RACE_LABEL[card.race] || card.race}</div>` : "";
+  const evolveLine = card.evolve ? `<div class="card-evolve-tag">⬆ 進化－${RACE_LABEL[card.evolve.race] || card.evolve.race}</div>` : "";
   const displayCost = opts.costOverride ?? card.cost;
   const costReduced = displayCost < card.cost;
 
@@ -39,6 +40,7 @@ export function createCardEl(card, opts = {}) {
     <div class="card-emoji">${card.emoji || "🃏"}</div>
     <div class="card-name">${card.name}</div>
     ${raceLine}
+    ${evolveLine}
     ${keywordsLine}
     ${statLine}
     ${opts.showCount ? `<div class="card-count">×${opts.count ?? 0}</div>` : ""}
@@ -95,6 +97,7 @@ export function showCardDetail(card) {
     ? `<div class="detail-keywords">${card.keywords.map((k) => KEYWORD_LABEL[k] || k).join("　")}</div>`
     : "";
   const raceLine = card.race ? `<div class="detail-race">${RACE_LABEL[card.race] || card.race}</div>` : "";
+  const evolveLine = card.evolve ? `<div class="card-evolve-tag">⬆ 進化－${RACE_LABEL[card.evolve.race] || card.evolve.race}</div>` : "";
 
   const overlay = document.createElement("div");
   overlay.className = "modal";
@@ -105,6 +108,7 @@ export function showCardDetail(card) {
       <h2>${card.name}</h2>
       ${card.rarity ? `<div class="rarity-tag rarity-${card.rarity}">${cardRarityLabel(card.rarity)}</div>` : ""}
       ${raceLine}
+      ${evolveLine}
       <div class="detail-cost">コスト ${card.cost ?? "-"}</div>
       ${statLine}
       ${keywordsLine}

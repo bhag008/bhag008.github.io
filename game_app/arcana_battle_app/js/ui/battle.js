@@ -68,6 +68,11 @@ function opponentTargets() {
   if (!pending) return [];
   if (pending.kind === "attack") return validAttackTargets(game, "player", pending.attackerUid);
   if (pending.kind === "play") {
+    if (pending.card.evolve) {
+      return game.players.player.board
+        .filter((m) => m.race === pending.card.evolve.race)
+        .map((m) => ({ type: "minion", side: "player", uid: m.uid }));
+    }
     const effect = pending.card.type === "minion" ? pending.card.battlecry : pending.card.effect;
     if (effect.type === "damage" || effect.type === "damage_monster_and_self") {
       const minionTargets = game.players.cpu.board.map((m) => ({ type: "minion", side: "cpu", uid: m.uid }));
@@ -94,6 +99,7 @@ function draw() {
   const targetableUids = new Set(targets.filter((t) => t.type === "minion").map((t) => t.uid));
   const enemyFaceTargetable = targets.some((t) => t.type === "face" && t.side === "cpu");
   const selfFaceTargetable = targets.some((t) => t.type === "face" && t.side === "player");
+  const evolveTargeting = !!(pending && pending.kind === "play" && pending.card.evolve);
 
   container.innerHTML = `
     <div class="battle-area">
@@ -144,7 +150,7 @@ function draw() {
   for (const m of p.board) {
     const el = createMinionEl(m);
     if (pending && pending.kind === "attack" && pending.attackerUid === m.uid) el.classList.add("selected");
-    if (targetableUids.has(m.uid)) el.classList.add("targetable");
+    if (targetableUids.has(m.uid)) el.classList.add(evolveTargeting ? "evolve-targetable" : "targetable");
     el.addEventListener("click", () => handlePlayerMinionClick(m));
     playerBoard.appendChild(el);
   }
@@ -189,6 +195,13 @@ function hideCpuBanner() {
 
 function handlePlayerMinionClick(m) {
   if (locked || game.active !== "player" || game.winner) return;
+  // 進化元の選択・回復スペルの対象選択など、味方ミニオンをターゲットにする
+  // プレイ中のカードがある場合はそちらを優先する。
+  if (pending && pending.kind === "play") {
+    const target = { type: "minion", side: "player", uid: m.uid };
+    if (isTargetValid(target)) handleTargetClick(target);
+    return;
+  }
   if (pending && pending.kind === "attack" && pending.attackerUid === m.uid) {
     pending = null;
     draw();

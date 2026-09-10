@@ -39,9 +39,10 @@
 1. **焔の書**（Book of Flame） — 炎・竜テーマ
 2. **深淵の書**（Book of the Abyss） — 悪魔・契約テーマ
 3. **妖精の書**（Book of Fairies） — 妖精・群れシナジーテーマ（種族システム導入）
+4. **進化の秘伝書**（Book of Evolution） — 竜・デーモンの「進化」システムがテーマ（下記「進化（evolve）システム」参照）。EXPANSIONS/EXPANSION_CARDSのキーは`"evolution"`
 
 ### 種族（race）システム
-`card.race`: `"dragon"` | `"demon"` | `"fairy"` | `undefined`。既存の竜・悪魔カードは遡及タグ付け済み（焔の書のドラゴン4種、深淵の書のデーモン9種）。
+`card.race`: `"dragon"` | `"demon"` | `"fairy"` | `undefined`。既存の竜・悪魔カードは遡及タグ付け済み（焔の書のドラゴン4種、深淵の書のデーモン9種）。進化の秘伝書のカードも当然dragon/demonタグを持つ。
 
 ## エンジンのメカニクス一覧
 
@@ -65,13 +66,37 @@
 - `"none"` — ターゲット不要（全体効果・自己効果など）
 
 ### 効果タイプ一覧（`effect.type` / `battlecry.type`など）
-`damage`, `heal`, `draw`, `damage_all_enemy`, `summon_token`, `self_damage_draw`（自傷+ドロー）, `pact_nuke`（自傷+ドロー+盤面全体ダメージ、自身は除外）, `discard_random_enemy`（手札ランダム破棄）, `damage_monster_and_self`（除去+自傷）, `damage_all_enemy_and_draw`, `heal_and_draw`, `buff_all_friendly_race`（自種族全体バフ）, `buff_self_per_race_count`（他種族数だけ自身バフ）, `summon_token_and_buff_self`（召喚してから自身バフ、新規召喚分も加算）, `draw_per_race_count`（種族数だけドロー、cap上限あり）, `bounce_random_enemy_if_race_count`（種族数がしきい値以上ならランダムに敵ミニオンを手札へ戻す）
+`damage`, `heal`, `draw`, `damage_all_enemy`, `summon_token`, `self_damage_draw`（自傷+ドロー）, `pact_nuke`（自傷+ドロー+盤面全体ダメージ、自身は除外）, `discard_random_enemy`（手札ランダム破棄）, `damage_monster_and_self`（除去+自傷）, `damage_all_enemy_and_draw`, `heal_and_draw`, `buff_all_friendly_race`（自種族全体バフ）, `buff_self_per_race_count`（他種族数だけ自身バフ）, `summon_token_and_buff_self`（召喚してから自身バフ、新規召喚分も加算）, `draw_per_race_count`（種族数だけドロー、cap上限あり）, `bounce_random_enemy_if_race_count`（種族数がしきい値以上ならランダムに敵ミニオンを手札へ戻す）, `random_burst`（敵ミニオンor顔にランダムに`value`ダメージを`hits`回。進化の秘伝書レジェンダリー専用の派手系効果）, `damage_all_enemy_and_draw_per_kill`（敵全体に`value`ダメージ、撃破した数だけドロー。同じく進化の秘伝書レジェンダリー専用）
 
 ### コスト軽減（`costReducePerRace`）
 ミニオン/スペルのカード定義に`{race, cap}`を持たせると、場の指定種族の数だけプレイ時コストが下がる（上限cap）。`engine.js`の`getEffectiveCost(game, side, card)`で計算。`canPlayCard`/`playCard`両方がこれを参照する。UI（手札）では`cardView.js`の`createCardEl`に`costOverride`を渡すと軽減後の数字が表示される（`battle.js`が計算して渡している）。
 
 ### 種族シナジーの設計方針（重要）
 **常時発動のオーラ（continuous aura）ではなく、既存のトリガーポイント（battlecry等）で発火時点の盤面をカウントする「一回きりのスナップショット効果」として実装している。** これにより盤面が変化してもバフは動的に増減しない（シンプルさ優先の設計判断）。`countRace(game, side, race, excludeUid)`が種族カウントのヘルパー。
+
+### 進化（`evolve`）システム（進化の秘伝書で導入）
+デュエルマスターズ型の進化を簡略化して実装。ミニオンのカード定義に`evolve: { race: "dragon" | "demon" }`を持たせると進化カードになる。
+
+**ルール（意図的な簡略化）:**
+- 盤面に**進化元と同種族のミニオンが1体以上いること**が唯一のプレイ条件（`canPlayCard`が`p.board.some(m => m.race === card.evolve.race)`でチェック）。コスト・種族以外の制約（元のカードのコストや進化元の指定など本家DMにある細かい条件）は持たせていない。
+- プレイすると**新しいミニオンとして場に追加されるのではなく、選んだ進化元ミニオンのオブジェクトを直接書き換える**（`playCard`内の`card.evolve`分岐）。そのため**盤面枠を消費しない**（`MAX_BOARD`一杯でも進化はできる。`canPlayCard`・`ai.js`の両方でこの枠チェックを迂回させている）。
+- 進化元の**デスラトルは発動しない**（破壊ではなく進化のため、`removeDeadMinions`を経由しない）。
+- 進化後のミニオンは**`sick`を常にfalse**にする（進化元の召喚酔い状態に関わらず、進化させたその場で攻撃できる＝進化の最大の旨味）。ただし**`attacked`は引き継ぐ**（そのターン既に攻撃済みの個体を進化させても2回攻撃はできない）。
+- 進化カードに`battlecry`を持たせると「進化時」の効果として発動する（`target:"none"`または`enemy_face`/`self_face`など固定ターゲットのみ。進化元選択と別に敵ターゲット選択を要求する設計にはしていない＝UIの複雑化を避けるため）。
+- ダメージを受けて欠けたHPなどは**進化時にリセットされる**（進化先のカード定義のhp/maxHpでまるごと上書き。スタック管理はしていない、シンプルさ優先）。
+
+**UI側の対応（`battle.js`/`cardView.js`）:**
+- 手札で進化カードをクリックすると`needsTarget`がtrueを返し（`card.evolve`があれば無条件でtrue）、`pending.kind === "play"`になる。`opponentTargets()`が`pending.card.evolve`を見て**自分の盤面の同種族ミニオン**をターゲット候補として返す。
+- 自分のミニオンをクリックした時の処理（`handlePlayerMinionClick`）は、従来「攻撃選択」しか考慮していなかったが、`pending.kind === "play"`中は先にターゲット選択として扱うよう修正した。**この修正はもともと回復スペル（`heal`/`heal_and_draw`）で自分のミニオンを対象に選ぶ際にも必要だったはずの経路で、進化実装のついでに直した**（回復スペルの対象選択が機能していたか未確認だったため、進化と合わせて動作確認済み）。
+- 進化のターゲット選択中は、既存の攻撃対象ハイライト（赤 `.targetable`）と区別するため専用の`.evolve-targetable`（オレンジ、`--evolve`カラー変数）でハイライトする。
+- 手札カードの表示には`⬆ 進化－ドラゴン/デーモン`のバッジ（`.card-evolve-tag`）を追加（`cardView.js`）。
+
+**AI側の対応（`ai.js`）:**
+- `playCpuCardsSteps`の`playable`フィルタで、進化カードは`p.board.length < MAX_BOARD`チェックを免除するよう修正（`card.evolve`なら常に許可、`canPlayCard`側の条件と整合）。
+- `chooseEvolveTarget(game, side, race)`: 進化元候補の中から「まだ攻撃していない個体」を優先（進化後すぐ攻撃できるため）、同条件なら攻撃力+体力の合計が低い個体を優先（弱い個体を底上げする）。
+
+**バランス検証メモ（2026年時点、簡易テストデッキでの結果）:**
+自動シミュレーション（`ai.js`同士の対称対戦、300戦/カード）で竜魔進化デッキを組んで検証したところ、進化元と進化ペイオフの比率が重要だと分かった。進化ペイオフ（`evolve`持ちカード）を増やしすぎると進化元が枯渇して手札で腐るカードが増え、逆に勝率が下がる（レジェンダリー2枚ずつ×エピック2枚ずつに全振りした構成でaggro相手18%まで悪化）。進化元・トークン生成・サポートスペルをバランスよく混ぜた構成（進化元候補14枚程度、進化ペイオフ11枚程度）が最も安定した。それでも妖精コンボ相手には30〜36%程度で、まだ明確な対抗馬とは言い切れていない。カード数値やデッキ比率は今後も調整の余地がある。
 
 ## CPU対戦相手（6体、レベル1〜6）
 

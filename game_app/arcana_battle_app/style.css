@@ -12,6 +12,7 @@
   --hp: #ff6b6b;
   --taunt: #6ea8ff;
   --race: #f79ad3;
+  --evolve: #ff9d3d;
   --radius: 16px;
   --rarity-basic: #7a8099;
   --rarity-common: #c9cede;
@@ -339,6 +340,7 @@ button {
 .card-name { font-size: 11px; font-weight: 700; line-height: 1.2; min-height: 26px; }
 .card-keywords { font-size: 9px; color: var(--taunt); }
 .card-race { font-size: 9px; color: var(--race); font-weight: 700; }
+.card-evolve-tag { font-size: 9px; color: var(--evolve); font-weight: 700; }
 .card-stats {
   display: flex;
   gap: 8px;
@@ -545,6 +547,7 @@ button {
 .minion-tile.no-attack { opacity: 0.55; }
 .minion-tile.selected { border-color: var(--gold); box-shadow: 0 0 8px rgba(244, 200, 106, 0.7); }
 .minion-tile.targetable { border-color: var(--danger); box-shadow: 0 0 10px rgba(255, 107, 107, 0.6); }
+.minion-tile.evolve-targetable { border-color: var(--evolve); box-shadow: 0 0 10px rgba(255, 157, 61, 0.6); }
 .minion-emoji { font-size: 24px; }
 .minion-name { font-size: 10px; font-weight: 700; line-height: 1.15; min-height: 24px; }
 .minion-keywords { font-size: 8px; color: var(--taunt); }
