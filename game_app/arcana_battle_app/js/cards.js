@@ -188,7 +188,7 @@ export const EXPANSION_CARDS = {
     // rare
     { id: "ev_r1", name: "竜語りの守護者", emoji: "🧎‍♂️", cost: 3, type: "minion", atk: 3, hp: 5, keywords: ["taunt"], race: "dragon", rarity: "rare", set: "evolution", text: "挑発" },
     { id: "ev_r2", name: "悪魔の眷属", emoji: "👹", cost: 3, type: "spell", rarity: "rare", set: "evolution", text: "2/2の眷属悪魔を2体呼び出す", effect: { type: "summon_token", token: "hellspawn_token", count: 2, target: "none" } },
-    { id: "ev_r3", name: "進化の秘術師", emoji: "🧙", cost: 4, type: "minion", atk: 3, hp: 4, keywords: [], rarity: "rare", set: "evolution", text: "戦場に出た時: カードを1枚引く", battlecry: { type: "draw", value: 1, target: "none" } },
+    { id: "ev_r3", name: "進化の秘術師", emoji: "🧙", cost: 4, type: "minion", atk: 3, hp: 4, keywords: [], rarity: "rare", set: "evolution", text: "戦場に出た時: デッキから進化カードを1枚ランダムに手札に加える", battlecry: { type: "tutor_random_evolve", target: "none" } },
     { id: "ev_r4", name: "古竜の怒り", emoji: "☄️", cost: 5, type: "spell", rarity: "rare", set: "evolution", text: "敵ミニオンに6ダメージ", effect: { type: "damage", value: 6, target: "select_monster" } },
     { id: "ev_r5", name: "魔竜への進化", emoji: "⚡🐲", cost: 4, type: "minion", atk: 5, hp: 5, keywords: [], race: "dragon", rarity: "rare", set: "evolution", evolve: { race: "dragon" }, text: "進化－竜。進化時: 敵に2ダメージ", battlecry: { type: "damage", value: 2, target: "enemy_face" } },
     { id: "ev_r6", name: "業火公への進化", emoji: "🔥👹", cost: 4, type: "minion", atk: 5, hp: 6, keywords: ["taunt"], race: "demon", rarity: "rare", set: "evolution", evolve: { race: "demon" }, text: "進化－悪魔。挑発" },
@@ -198,7 +198,7 @@ export const EXPANSION_CARDS = {
     { id: "ev_e3", name: "古代竜王への進化", emoji: "👑🐲", cost: 6, type: "minion", atk: 7, hp: 7, keywords: ["taunt"], race: "dragon", rarity: "epic", set: "evolution", evolve: { race: "dragon" }, text: "進化－竜。挑発。進化時: 自分に3回復", battlecry: { type: "heal", value: 3, target: "self_face" } },
     { id: "ev_e4", name: "深淵公爵への進化", emoji: "😈👹", cost: 6, type: "minion", atk: 6, hp: 8, keywords: ["lifesteal"], race: "demon", rarity: "epic", set: "evolution", evolve: { race: "demon" }, text: "進化－悪魔。吸血。進化時: カードを2枚引く", battlecry: { type: "draw", value: 2, target: "none" } },
     // legendary: このパックの目玉。進化時の効果は既存タイプにない専用効果で、派手さと不確実性を持たせている
-    { id: "ev_l1", name: "古龍神ヴォルカドラゴン", emoji: "🌋🐲", cost: 8, type: "minion", atk: 8, hp: 8, keywords: ["taunt"], race: "dragon", rarity: "legendary", set: "evolution", evolve: { race: "dragon" }, text: "進化－竜。挑発。進化時: 敵にランダムに2ダメージを3回与える（ミニオンか顔面のどちらかにランダムで命中）", battlecry: { type: "random_burst", value: 2, hits: 3, target: "none" } },
+    { id: "ev_l1", name: "古龍神ヴォルカドラゴン", emoji: "🌋🐲", cost: 8, type: "minion", atk: 8, hp: 8, keywords: ["taunt"], race: "dragon", rarity: "legendary", set: "evolution", evolve: { race: "dragon" }, text: "進化－竜。挑発。進化時: 敵にランダムに3ダメージを3回与える（ミニオンか顔面のどちらかにランダムで命中）", battlecry: { type: "random_burst", value: 3, hits: 3, target: "none" } },
     { id: "ev_l2", name: "深淵の始祖ネクロズアリオン", emoji: "🕳️👹", cost: 7, type: "minion", atk: 7, hp: 8, keywords: ["lifesteal"], race: "demon", rarity: "legendary", set: "evolution", evolve: { race: "demon" }, text: "進化－悪魔。吸血。進化時: 敵ミニオン全体に3ダメージを与え、撃破した数だけカードを引く", battlecry: { type: "damage_all_enemy_and_draw_per_kill", value: 3, target: "none" } },
   ],
 };

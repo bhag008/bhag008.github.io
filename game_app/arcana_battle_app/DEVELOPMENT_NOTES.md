@@ -66,7 +66,7 @@
 - `"none"` — ターゲット不要（全体効果・自己効果など）
 
 ### 効果タイプ一覧（`effect.type` / `battlecry.type`など）
-`damage`, `heal`, `draw`, `damage_all_enemy`, `summon_token`, `self_damage_draw`（自傷+ドロー）, `pact_nuke`（自傷+ドロー+盤面全体ダメージ、自身は除外）, `discard_random_enemy`（手札ランダム破棄）, `damage_monster_and_self`（除去+自傷）, `damage_all_enemy_and_draw`, `heal_and_draw`, `buff_all_friendly_race`（自種族全体バフ）, `buff_self_per_race_count`（他種族数だけ自身バフ）, `summon_token_and_buff_self`（召喚してから自身バフ、新規召喚分も加算）, `draw_per_race_count`（種族数だけドロー、cap上限あり）, `bounce_random_enemy_if_race_count`（種族数がしきい値以上ならランダムに敵ミニオンを手札へ戻す）, `random_burst`（敵ミニオンor顔にランダムに`value`ダメージを`hits`回。進化の秘伝書レジェンダリー専用の派手系効果）, `damage_all_enemy_and_draw_per_kill`（敵全体に`value`ダメージ、撃破した数だけドロー。同じく進化の秘伝書レジェンダリー専用）
+`damage`, `heal`, `draw`, `damage_all_enemy`, `summon_token`, `self_damage_draw`（自傷+ドロー）, `pact_nuke`（自傷+ドロー+盤面全体ダメージ、自身は除外）, `discard_random_enemy`（手札ランダム破棄）, `damage_monster_and_self`（除去+自傷）, `damage_all_enemy_and_draw`, `heal_and_draw`, `buff_all_friendly_race`（自種族全体バフ）, `buff_self_per_race_count`（他種族数だけ自身バフ）, `summon_token_and_buff_self`（召喚してから自身バフ、新規召喚分も加算）, `draw_per_race_count`（種族数だけドロー、cap上限あり）, `bounce_random_enemy_if_race_count`（種族数がしきい値以上ならランダムに敵ミニオンを手札へ戻す）, `random_burst`（敵ミニオンor顔にランダムに`value`ダメージを`hits`回。進化の秘伝書レジェンダリー専用の派手系効果）, `damage_all_enemy_and_draw_per_kill`（敵全体に`value`ダメージ、撃破した数だけドロー。同じく進化の秘伝書レジェンダリー専用）, `tutor_random_evolve`（自分のデッキから`evolve`持ちカードをランダムに1枚サーチして手札に加える。手札上限なら見つけたカードごと失う＝`drawCard`と同じ挙動）
 
 ### コスト軽減（`costReducePerRace`）
 ミニオン/スペルのカード定義に`{race, cap}`を持たせると、場の指定種族の数だけプレイ時コストが下がる（上限cap）。`engine.js`の`getEffectiveCost(game, side, card)`で計算。`canPlayCard`/`playCard`両方がこれを参照する。UI（手札）では`cardView.js`の`createCardEl`に`costOverride`を渡すと軽減後の数字が表示される（`battle.js`が計算して渡している）。

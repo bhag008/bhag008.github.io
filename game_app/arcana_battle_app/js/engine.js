@@ -306,6 +306,26 @@ function applyEffectOnly(game, side, effect, target, sourceUid) {
       if (kills > 0) addLog(game, `${kills}体を撃破し、カードを${kills}枚引いた`);
       break;
     }
+    case "tutor_random_evolve": {
+      const p = game.players[side];
+      const indices = [];
+      for (let i = 0; i < p.deck.length; i++) {
+        const c = getCard(p.deck[i]);
+        if (c && c.evolve) indices.push(i);
+      }
+      if (indices.length) {
+        const idx = indices[Math.floor(Math.random() * indices.length)];
+        const [cardId] = p.deck.splice(idx, 1);
+        const found = getCard(cardId);
+        if (p.hand.length < MAX_HAND) {
+          p.hand.push({ uid: game.nextUid++, cardId });
+          addLog(game, `${side === "player" ? "あなた" : "相手"}は「${found.name}」を手札に加えた`);
+        } else {
+          addLog(game, `${side === "player" ? "あなた" : "相手"}の手札が上限のため見つけたカードを失った`);
+        }
+      }
+      break;
+    }
     default:
       break;
   }
