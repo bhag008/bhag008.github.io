@@ -29,11 +29,26 @@ function chooseSpellTarget(game, side, effect) {
   return { type: "face", side: enemy };
 }
 
-// 自身の場の頭数に応じて強くなる「スケーリング」系の戦場効果かどうか。
+// 自身の場の頭数（同種族）に応じて強くなる「スケーリング」系の効果かどうか。
 // これらは場が育ってから使う方が価値が高いため、他に出せるカードがない時まで温存させる。
 function isScalerBattlecry(card) {
   const eff = card.type === "minion" ? card.battlecry : card.effect;
-  return !!eff && (eff.type === "buff_self_per_race_count" || eff.type === "summon_token_and_buff_self");
+  return (
+    !!eff &&
+    (eff.type === "buff_self_per_race_count" ||
+      eff.type === "summon_token_and_buff_self" ||
+      eff.type === "buff_all_friendly_race" ||
+      eff.type === "draw_per_race_count")
+  );
+}
+
+// 敵ミニオンが少ない状態で撃つと価値が薄い全体除去スペルかどうか。
+// 敵の場に2体以上いない場合は温存し、他に出せるカードがない時のみ撃つ。
+function isWastefulBoardWipe(game, side, card) {
+  if (card.type !== "spell" || !card.effect) return false;
+  if (card.effect.type !== "damage_all_enemy" && card.effect.type !== "damage_all_enemy_and_draw") return false;
+  const enemy = side === "player" ? "cpu" : "player";
+  return game.players[enemy].board.length < 2;
 }
 
 // 1回分の行動（カードプレイ・攻撃）ごとに、その間に追加されたログ行を添えてyieldする。
@@ -55,9 +70,11 @@ function* playCpuCardsSteps(game, side) {
     const hasTauntOnBoard = p.board.some((m) => m.keywords.includes("taunt"));
     const underThreat = game.players[enemy].board.length > 0;
 
-    // スケーリング系は温存: 他に出せるカードがあればそちらを先に出し、盤面を育ててから使う。
-    const nonScalers = playable.filter(({ card }) => !isScalerBattlecry(card));
-    const pool = nonScalers.length ? nonScalers : playable;
+    // スケーリング系・薄い盤面への全体除去は温存: 他に出せるカードがあればそちらを先に出す。
+    const preferred = playable.filter(
+      ({ card }) => !isScalerBattlecry(card) && !isWastefulBoardWipe(game, side, card)
+    );
+    const pool = preferred.length ? preferred : playable;
     let choice = pool[0];
     if (!hasTauntOnBoard && underThreat) {
       const tauntOption = pool.find(({ card }) => card.type === "minion" && card.keywords.includes("taunt"));
