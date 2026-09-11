@@ -63,11 +63,12 @@ function labelForCandidate(side, kind, uid) {
   if (kind === 'enemyCreature') inst = engine.players[opp].battle.find((c) => c.uid === uid);
   else if (kind === 'ownCreature') inst = engine.players[side].battle.find((c) => c.uid === uid);
   else if (kind === 'anyCreature') inst = engine.players.player.battle.find((c) => c.uid === uid) || engine.players.cpu.battle.find((c) => c.uid === uid);
-  else if (kind === 'ownGraveyardCreature') inst = engine.players[side].graveyard.find((c) => c.uid === uid);
+  else if (kind === 'ownGraveyardCreature' || kind === 'ownGraveyardCard') inst = engine.players[side].graveyard.find((c) => c.uid === uid);
   else if (kind === 'ownHandCard') inst = engine.players[side].hand.find((c) => c.uid === uid);
   else if (kind === 'deckTutor') inst = engine.players[side].deck.find((c) => c.uid === uid);
+  else if (kind === 'enemyManaCard') inst = engine.players[opp].mana.find((c) => c.uid === uid);
   if (!inst) return '(不明なカード)';
-  const d = getCard(inst.cardId);
+  const d = inst.stack ? engine.cardOf(inst) : getCard(inst.cardId);
   return `${d.name}${d.power != null ? ` (P${d.power})` : ''}`;
 }
 
@@ -304,7 +305,7 @@ function civBadge(civ) {
 }
 
 function renderZoneCard(side, inst, opts = {}) {
-  const def = getCard(inst.cardId);
+  const def = engine.cardOf(inst);
   const div = document.createElement('div');
   div.className = 'zone-card civ-' + def.civ;
   if (inst.tapped) div.classList.add('tapped');
@@ -313,11 +314,15 @@ function renderZoneCard(side, inst, opts = {}) {
   if (opts.attackable) div.classList.add('attackable');
   const kw = keywordBadges(def);
   const atkBonus = engine.powerWhileAttacking(side, inst) - engine.powerBase(side, inst);
+  const evoChain = inst.stack && inst.stack.length > 1
+    ? `<div class="zc-evo">進化元: ${inst.stack.slice(0, -1).map((l) => escapeHtml(getCard(l.cardId).name)).join(' → ')}</div>`
+    : '';
   div.innerHTML = `
     <div class="zc-top">${civBadge(def.civ)}<span class="zc-cost">${def.cost}</span></div>
     <div class="zc-name">${escapeHtml(def.name)}</div>
     <div class="zc-power">${def.power != null ? 'P' + engine.powerBase(side, inst) + (atkBonus ? `(攻+${atkBonus})` : '') : ''}</div>
     <div class="zc-kw">${kw.map((k) => `<span class="badge badge-${k}">${k}</span>`).join('')}</div>
+    ${evoChain}
   `;
   if (opts.onClick) div.onclick = opts.onClick;
   return div;
@@ -349,8 +354,9 @@ function renderBattle() {
 
   const selfBattle = $('selfBattleZone');
   selfBattle.innerHTML = '';
+  const ignoreRestrictions = engine.turnFlags.player?.ignoreAttackRestrictions;
   for (const c of me.battle) {
-    const eligible = !c.tapped && !c.sickness && engine.canAttackAtAll(c);
+    const eligible = !c.tapped && (ignoreRestrictions || !c.sickness) && engine.canAttackAtAll('player', c);
     selfBattle.appendChild(renderZoneCard('player', c, {
       selected: c.uid === selectedAttackerUid,
       onClick: (myTurn && engine.phase === 'attack' && eligible) ? () => selectAttacker(c.uid) : null,
@@ -367,11 +373,12 @@ function renderBattle() {
     const def = getCard(inst.cardId);
     const div = document.createElement('div');
     div.className = 'hand-card civ-' + def.civ;
-    const affordable = engine.canPayCost('player', def);
+    const affordable = engine.canPayCost('player', def) && (!def.evolution || engine.getEvolutionTargets('player', def).length > 0);
     if (!myTurn || engine.phase !== 'main') div.classList.add('disabled');
     const kw = keywordBadges(def);
+    if (def.evolution) kw.unshift('進化');
     div.innerHTML = `
-      <div class="zc-top">${civBadge(def.civ)}<span class="zc-cost">${def.cost}</span></div>
+      <div class="zc-top">${civBadge(def.civ)}<span class="zc-cost">${engine.effectiveCost('player', def)}</span></div>
       <div class="zc-name">${escapeHtml(def.name)}</div>
       <div class="zc-power">${def.power != null ? 'P' + def.power : ''}</div>
       <div class="zc-kw">${kw.map((k) => `<span class="badge badge-${k}">${k}</span>`).join('')}</div>
@@ -403,6 +410,18 @@ function playHandCard(handUid) {
   const def = getCard(inst.cardId);
   if (!engine.canPayCost('player', def)) return;
 
+  if (def.evolution) {
+    const targets = engine.getEvolutionTargets('player', def);
+    if (targets.length === 0) return;
+    if (targets.length === 1) { doPlayEvolution(handUid, targets[0]); return; }
+    const options = targets.map((uid) => {
+      const slot = engine.players.player.battle.find((s) => s.uid === uid);
+      return { label: `${engine.cardOf(slot).name}に進化させる`, value: uid };
+    });
+    promptChoice(`${def.name} の進化元を選択`, options, (uid) => { closeModal(); doPlayEvolution(handUid, uid); });
+    return;
+  }
+
   if (def.type === 'spell') {
     const spec = def.spell?.target;
     if (spec) {
@@ -433,6 +452,21 @@ function playHandCard(handUid) {
   checkGameOverAfterAction();
 }
 
+function doPlayEvolution(handUid, targetUid) {
+  const result = engine.playEvolutionCard('player', handUid, targetUid);
+  renderBattle();
+  if (result.awaitingCipTarget) {
+    const spec = engine.pendingCip.ability.target;
+    promptTargetSelection('player', spec, (uids) => {
+      engine.resolveCip(uids);
+      renderBattle();
+      checkGameOverAfterAction();
+    });
+    return;
+  }
+  checkGameOverAfterAction();
+}
+
 function selectAttacker(uid) {
   selectedAttackerUid = (selectedAttackerUid === uid) ? null : uid;
   renderBattle();
@@ -444,8 +478,21 @@ function performAttack(target) {
   selectedAttackerUid = null;
   const result = engine.declareAttack('player', attackerUid, target);
   if (!result.ok) { renderBattle(); return; }
-  if (result.awaitingBlock) {
-    const blockUid = chooseBlockForCPU(engine, attackerUid);
+  if (result.awaitingAttackTrigger) {
+    const spec = engine.pendingAttackTrigger.ability.target;
+    renderBattle();
+    promptTargetSelection('player', spec, (uids) => {
+      const r2 = engine.resolveAttackTrigger(uids);
+      finishAttackFlow(r2);
+    });
+    return;
+  }
+  finishAttackFlow(result);
+}
+
+function finishAttackFlow(result) {
+  if (result.awaitingBlock && engine.pendingBlock) {
+    const blockUid = chooseBlockForCPU(engine, engine.pendingBlock.attackerUid);
     engine.resolveBlock(blockUid);
   }
   autoResolveShieldTriggers(engine, 'cpu');
@@ -511,7 +558,7 @@ function offerPlayerBlock(onDone) {
   const pb = engine.pendingBlock;
   const blockers = pb.eligibleBlockers.map((uid) => engine.players.player.battle.find((c) => c.uid === uid)).filter(Boolean);
   const options = blockers.map((b) => {
-    const d = getCard(b.cardId);
+    const d = engine.cardOf(b);
     return { label: `${d.name} (P${engine.powerBase('player', b)}) でブロックする`, value: b.uid };
   });
   options.push({ label: 'ブロックしない', value: null });

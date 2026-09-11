@@ -110,6 +110,7 @@ h1, h2, h3 { margin: 0 0 8px; }
   width: 82px; border-radius: 8px; padding: 5px; font-size: 10px; background: var(--card-bg-2);
   border-left: 4px solid var(--civ-color); cursor: default;
 }
+.zc-evo { margin-top: 3px; font-size: 8.5px; color: var(--accent-2); line-height: 1.3; }
 .zone-card.civ-fire { --civ-color: var(--civ-fire); }
 .zone-card.civ-water { --civ-color: var(--civ-water); }
 .zone-card.civ-nature { --civ-color: var(--civ-nature); }

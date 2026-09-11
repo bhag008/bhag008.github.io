@@ -33,10 +33,22 @@ function sortCandidates(engine, side, spec, candidates) {
       const ob = engine.players[side].hand.find((x) => x.uid === b);
       return getCard(oa.cardId).cost - getCard(ob.cardId).cost;
     });
+  } else if (spec.kind === 'ownGraveyardCard') {
+    pool.sort((a, b) => {
+      const oa = engine.players[side].graveyard.find((x) => x.uid === a);
+      const ob = engine.players[side].graveyard.find((x) => x.uid === b);
+      return getCard(ob.cardId).cost - getCard(oa.cardId).cost;
+    });
   } else if (spec.kind === 'deckTutor') {
     pool.sort((a, b) => {
       const oa = engine.players[side].deck.find((x) => x.uid === a);
       const ob = engine.players[side].deck.find((x) => x.uid === b);
+      return getCard(ob.cardId).cost - getCard(oa.cardId).cost;
+    });
+  } else if (spec.kind === 'enemyManaCard') {
+    pool.sort((a, b) => {
+      const oa = engine.players[engine.opponent(side)].mana.find((x) => x.uid === a);
+      const ob = engine.players[engine.opponent(side)].mana.find((x) => x.uid === b);
       return getCard(ob.cardId).cost - getCard(oa.cardId).cost;
     });
   }
@@ -95,13 +107,31 @@ export function* cpuTurnSteps(engine) {
   while (played) {
     played = false;
     const ps = engine.players[side];
-    const playable = ps.hand.filter((c) => engine.canPayCost(side, getCard(c.cardId)));
+    const playable = ps.hand.filter((c) => {
+      const def = getCard(c.cardId);
+      if (!engine.canPayCost(side, def)) return false;
+      if (def.evolution) return engine.getEvolutionTargets(side, def).length > 0;
+      return true;
+    });
     if (playable.length === 0) break;
     playable.sort((a, b) => getCard(b.cardId).cost - getCard(a.cardId).cost);
     const chosen = playable[0];
     const def = getCard(chosen.cardId);
 
-    if (def.type === 'spell') {
+    if (def.evolution) {
+      // 進化元は、進化させたときに最も強化幅が大きくなる(現在のパワーが低い)ものを選ぶ
+      const targets = engine.getEvolutionTargets(side, def);
+      targets.sort((a, b) => {
+        const ca = engine.players[side].battle.find((s) => s.uid === a);
+        const cb = engine.players[side].battle.find((s) => s.uid === b);
+        return engine.powerBase(side, ca) - engine.powerBase(side, cb);
+      });
+      const result = engine.playEvolutionCard(side, chosen.uid, targets[0]);
+      if (result.awaitingCipTarget) {
+        const spec = engine.pendingCip.ability.target;
+        engine.resolveCip(chooseTargetsForCpu(engine, side, spec));
+      }
+    } else if (def.type === 'spell') {
       const targetUids = def.spell?.target ? chooseTargetsForCpu(engine, side, def.spell.target) : [];
       engine.playCard(side, chosen.uid, { targetUids });
     } else {
@@ -133,7 +163,11 @@ export function* cpuTurnSteps(engine) {
     if (engine.isGameOver()) return;
     const stillThere = engine.players[side].battle.find((c) => c.uid === atk.uid && !c.tapped && !c.sickness);
     if (!stillThere) continue;
-    const result = engine.declareAttack(side, atk.uid, { type: 'player' });
+    let result = engine.declareAttack(side, atk.uid, { type: 'player' });
+    if (result.awaitingAttackTrigger) {
+      const spec = engine.pendingAttackTrigger.ability.target;
+      result = engine.resolveAttackTrigger(chooseTargetsForCpu(engine, side, spec));
+    }
     yield { type: 'attack', attackerUid: atk.uid, result };
     if (engine.isGameOver()) return;
   }
