@@ -16,7 +16,7 @@ export class CombatEngine {
     this.run = run;
     const hasSwiftFeet = run.relics.includes('swiftFeet');
     const hasVengefulThorns = run.relics.includes('vengefulThorns');
-    const hasHardShell = run.relics.includes('hardShell');
+    this.hasHardShell = run.relics.includes('hardShell');
     const hasMarkOfFury = run.relics.includes('markOfFury');
     const hasAlchemicVial = run.relics.includes('alchemicVial');
     const hasGuardianAmulet = run.relics.includes('guardianAmulet');
@@ -55,7 +55,6 @@ export class CombatEngine {
 
     for (const e of this.enemies) e.intent = rollIntent(e);
     this.startPlayerTurn(true);
-    if (hasHardShell) this.player.block += 3;
     if (hasGuardianAmulet) this.player.block += 6;
   }
 
@@ -102,6 +101,7 @@ export class CombatEngine {
     let dmg = base + (attacker.strength || 0);
     if (attacker.statuses?.weak > 0) dmg = Math.floor(dmg * 0.75);
     if (defender.statuses?.vulnerable > 0) dmg = Math.floor(dmg * 1.5);
+    if (defender === this.player && this.hasHardShell) dmg -= 1;
     return Math.max(0, dmg);
   }
 

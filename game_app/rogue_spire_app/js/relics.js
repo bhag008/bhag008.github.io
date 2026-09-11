@@ -1,7 +1,7 @@
 // 遺物データベース。効果は combat.js / map.js 側で relic id を直接参照して適用する。
 export const RELIC_DB = {
   ashenHeart: { name: '灰の心臓', desc: '戦闘終了後、HPを5回復する。', rarity: 'starter' },
-  hardShell: { name: '硬い甲羅', desc: '戦闘開始時、ブロックを3獲得する。', rarity: 'common' },
+  hardShell: { name: '硬い甲羅', desc: '常時、受ける攻撃ダメージを1軽減する。', rarity: 'common' },
   markOfFury: { name: '闘志の証', desc: '戦闘開始時、力を1獲得する。', rarity: 'common' },
   swiftFeet: { name: '素早い足', desc: '毎ターン、カードを1枚多く引く。', rarity: 'uncommon' },
   vengefulThorns: { name: '復讐の棘', desc: '常時、攻撃を受けると3ダメージを反射する。', rarity: 'uncommon' },
