@@ -3,7 +3,10 @@ import {
   cardType, cardTarget, cardRarity, cardPrice, rollCardRewards, allCardIds, getCardDef,
   RARITY_ORDER, RARITY_LABELS,
 } from './cards.js';
-import { relicName, relicDesc, rollRelicReward, rollBossRelicReward } from './relics.js';
+import {
+  relicName, relicDesc, rollRelicReward, rollBossRelicReward,
+  allRelicIds, relicRarity, RELIC_RARITY_ORDER, RELIC_RARITY_LABELS,
+} from './relics.js';
 import { rollNormalEncounter, rollEliteEncounter, rollBossEncounter } from './enemies.js';
 import { generateMap, getNode, availableNodeIds, FLOORS, SLOTS } from './map.js';
 import { CombatEngine } from './combat.js';
@@ -610,6 +613,34 @@ function renderCardListModal() {
 el('btnCardListTitle').addEventListener('click', renderCardListModal);
 el('btnCardListMap').addEventListener('click', renderCardListModal);
 el('btnCloseCardListModal').addEventListener('click', () => el('cardListModal').classList.add('hidden'));
+
+// ---------- Relic list (compendium) ----------
+function renderRelicListModal() {
+  const ownedIds = run ? run.relics : [];
+  const ids = allRelicIds();
+  let html = '';
+  for (const rarity of RELIC_RARITY_ORDER) {
+    const idsInRarity = ids.filter(id => relicRarity(id) === rarity);
+    if (!idsInRarity.length) continue;
+    html += `<h4 class="card-list-group">${RELIC_RARITY_LABELS[rarity]}</h4><div class="relic-list-grid">`;
+    html += idsInRarity.map(id => {
+      const owned = ownedIds.includes(id);
+      return `<div class="relic-reward-card${owned ? ' owned' : ''}">
+        <div class="r-icon">${RELIC_ICONS[id] || '❔'}</div>
+        <div class="r-name">${relicName(id)}</div>
+        <div class="r-desc">${relicDesc(id)}</div>
+        ${owned ? '<div class="r-owned-badge">所持中</div>' : ''}
+      </div>`;
+    }).join('');
+    html += `</div>`;
+  }
+  el('relicListModalBody').innerHTML = html;
+  el('relicListModal').classList.remove('hidden');
+}
+
+el('btnRelicListTitle').addEventListener('click', renderRelicListModal);
+el('btnRelicListMap').addEventListener('click', renderRelicListModal);
+el('btnCloseRelicListModal').addEventListener('click', () => el('relicListModal').classList.add('hidden'));
 
 // ---------- Init ----------
 renderTitle();

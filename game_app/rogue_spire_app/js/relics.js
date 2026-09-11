@@ -17,6 +17,17 @@ export function relicDesc(id) {
   return RELIC_DB[id]?.desc || '';
 }
 
+export function relicRarity(id) {
+  return RELIC_DB[id]?.rarity;
+}
+
+export function allRelicIds() {
+  return Object.keys(RELIC_DB);
+}
+
+export const RELIC_RARITY_ORDER = ['starter', 'common', 'uncommon', 'boss'];
+export const RELIC_RARITY_LABELS = { starter: 'スターター', common: 'コモン', uncommon: 'アンコモン', boss: 'ボス' };
+
 const NON_STARTER_RELIC_IDS = Object.keys(RELIC_DB).filter(id => RELIC_DB[id].rarity !== 'starter' && RELIC_DB[id].rarity !== 'boss');
 const BOSS_RELIC_IDS = Object.keys(RELIC_DB).filter(id => RELIC_DB[id].rarity === 'boss');
 
