@@ -19,6 +19,9 @@ export class CombatEngine {
     const hasHardShell = run.relics.includes('hardShell');
     const hasMarkOfFury = run.relics.includes('markOfFury');
     const hasAlchemicVial = run.relics.includes('alchemicVial');
+    const hasGuardianAmulet = run.relics.includes('guardianAmulet');
+    const hasNimbleBoots = run.relics.includes('nimbleBoots');
+    const hasBloodPact = run.relics.includes('bloodPact');
 
     this.player = {
       hp: run.hp,
@@ -44,10 +47,16 @@ export class CombatEngine {
     this.lastLog = [];
 
     if (hasMarkOfFury) this.player.strength += 1;
+    if (hasNimbleBoots) this.player.dexterity += 2;
+    if (hasBloodPact) {
+      this.player.strength += 3;
+      this.player.hp = Math.max(1, this.player.hp - 3);
+    }
 
     for (const e of this.enemies) e.intent = rollIntent(e);
     this.startPlayerTurn(true);
     if (hasHardShell) this.player.block += 3;
+    if (hasGuardianAmulet) this.player.block += 6;
   }
 
   log(msg) {

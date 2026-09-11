@@ -4,7 +4,7 @@ import {
   RARITY_ORDER, RARITY_LABELS,
 } from './cards.js';
 import {
-  relicName, relicDesc, rollRelicReward, rollBossRelicReward,
+  relicName, relicDesc, rollRelicReward, rollBossRelicReward, applyRelicPickupEffect,
   allRelicIds, relicRarity, RELIC_RARITY_ORDER, RELIC_RARITY_LABELS,
 } from './relics.js';
 import { rollNormalEncounter, rollEliteEncounter, rollBossEncounter } from './enemies.js';
@@ -31,6 +31,9 @@ let currentShopStock = null;
 const RELIC_ICONS = {
   ashenHeart: '💗', hardShell: '🛡️', markOfFury: '⚔️', swiftFeet: '🥾',
   vengefulThorns: '🌵', alchemicVial: '🧪', travelersCharm: '🍀',
+  guardianAmulet: '🔰', nimbleBoots: '👢', merchantsRing: '💍',
+  bloodPact: '🩸', luckyCoin: '🪙', whetstone: '🪨',
+  vitalCrystal: '💎', phoenixFeather: '🪶',
 };
 const STATUS_LABELS = { weak: '脱力', vulnerable: '弱体', frail: '防御低下', poison: '毒' };
 
@@ -80,7 +83,7 @@ function absoluteFloor(node) {
 }
 
 function rollGoldReward(nodeType) {
-  const scale = 1 + (run.act - 1) * 0.4;
+  const scale = (1 + (run.act - 1) * 0.4) * (run.relics.includes('merchantsRing') ? 1.2 : 1);
   if (nodeType === 'boss') return Math.round((75 + Math.floor(Math.random() * 26)) * scale);
   if (nodeType === 'elite') return Math.round((25 + Math.floor(Math.random() * 16)) * scale);
   return Math.round((10 + Math.floor(Math.random() * 11)) * scale);
@@ -381,6 +384,13 @@ function handleCombatWin() {
   const node = pendingNode;
   lastGoldGain = rollGoldReward(node.type);
   run.gold += lastGoldGain;
+
+  const wasLowHp = run.hp <= run.maxHp * 0.5;
+  let postCombatHeal = 0;
+  if (run.relics.includes('ashenHeart')) postCombatHeal += 5;
+  if (wasLowHp && run.relics.includes('phoenixFeather')) postCombatHeal += 12;
+  if (postCombatHeal > 0) run.hp = Math.min(run.maxHp, run.hp + postCombatHeal);
+
   if (node.type === 'elite' || node.type === 'boss') {
     const relicId = node.type === 'boss' ? rollBossRelicReward(run.relics) : rollRelicReward(run.relics);
     if (relicId) {
@@ -400,6 +410,7 @@ function showRelicScreen(relicId) {
   `;
   el('btnTakeRelic').onclick = () => {
     run.relics.push(relicId);
+    applyRelicPickupEffect(run, relicId);
     showCardRewardScreen();
   };
 }
@@ -451,6 +462,10 @@ function showRestScreen() {
 // ---------- Shop ----------
 const RELIC_PRICE = 150;
 
+function shopPrice(basePrice) {
+  return run.relics.includes('luckyCoin') ? Math.round(basePrice * 0.85) : basePrice;
+}
+
 function showShopScreen() {
   currentShopStock = generateShopStock(run);
   renderShop();
@@ -461,7 +476,7 @@ function renderShop() {
   el('shopGoldText').textContent = run.gold;
 
   el('shopCards').innerHTML = currentShopStock.cards.map(inst => {
-    const price = cardPrice(inst);
+    const price = shopPrice(cardPrice(inst));
     const affordable = run.gold >= price;
     return cardHtml(inst, `reward-card${affordable ? '' : ' unaffordable-price'}`, `<div class="shop-item-price">💰${price}</div>`);
   }).join('');
@@ -470,7 +485,7 @@ function renderShop() {
       const uid = Number(cardEl.dataset.uid);
       const inst = currentShopStock.cards.find(c => c.uid === uid);
       if (!inst) return;
-      const price = cardPrice(inst);
+      const price = shopPrice(cardPrice(inst));
       if (run.gold < price) return;
       run.gold -= price;
       run.deck.push(inst);
@@ -482,20 +497,22 @@ function renderShop() {
   const relicWrap = el('shopRelicWrap');
   if (currentShopStock.relicId) {
     const relicId = currentShopStock.relicId;
-    const affordable = run.gold >= RELIC_PRICE;
+    const price = shopPrice(RELIC_PRICE);
+    const affordable = run.gold >= price;
     relicWrap.innerHTML = `
       <div class="relic-reward-card">
         <div class="r-icon">${RELIC_ICONS[relicId] || '❔'}</div>
         <div class="r-name">${relicName(relicId)}</div>
         <div class="r-desc">${relicDesc(relicId)}</div>
-        <div class="shop-item-price">💰${RELIC_PRICE}</div>
+        <div class="shop-item-price">💰${price}</div>
       </div>
       <button id="btnBuyRelic" class="btn ${affordable ? 'btn-primary' : 'btn-ghost'}" ${affordable ? '' : 'disabled'}>遺物を買う</button>
     `;
     el('btnBuyRelic').onclick = () => {
-      if (run.gold < RELIC_PRICE) return;
-      run.gold -= RELIC_PRICE;
+      if (run.gold < price) return;
+      run.gold -= price;
       run.relics.push(relicId);
+      applyRelicPickupEffect(run, relicId);
       currentShopStock.relicId = null;
       renderShop();
     };
@@ -503,8 +520,9 @@ function renderShop() {
     relicWrap.innerHTML = '';
   }
 
-  const canRemove = run.deck.length > 5 && run.gold >= currentShopStock.removalPrice;
-  el('btnShopRemove').textContent = `カードを1枚削除する (💰${currentShopStock.removalPrice})`;
+  const removalPrice = shopPrice(currentShopStock.removalPrice);
+  const canRemove = run.deck.length > 5 && run.gold >= removalPrice;
+  el('btnShopRemove').textContent = `カードを1枚削除する (💰${removalPrice})`;
   el('btnShopRemove').disabled = !canRemove;
   el('shopRemoveList').classList.add('hidden');
   el('shopRemoveList').innerHTML = '';
@@ -514,9 +532,9 @@ function renderShop() {
     list.innerHTML = run.deck.map(inst => cardHtml(inst, 'deck-card')).join('');
     list.querySelectorAll('.card').forEach(cardEl => {
       cardEl.addEventListener('click', () => {
-        if (run.gold < currentShopStock.removalPrice) return;
+        if (run.gold < removalPrice) return;
         const uid = Number(cardEl.dataset.uid);
-        run.gold -= currentShopStock.removalPrice;
+        run.gold -= removalPrice;
         run.deck = run.deck.filter(c => c.uid !== uid);
         run.cardsRemoved = (run.cardsRemoved || 0) + 1;
         currentShopStock.removalPrice = 75 + 25 * run.cardsRemoved;

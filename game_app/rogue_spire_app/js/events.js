@@ -1,6 +1,6 @@
 // イベントデータベース。各選択肢は run を直接書き換え、結果テキストを返す。
 import { allRewardEligibleIds, cardDisplayName, makeCardInstance, randomCardIdByRarity } from './cards.js';
-import { rollRelicReward, relicName } from './relics.js';
+import { rollRelicReward, relicName, applyRelicPickupEffect } from './relics.js';
 
 function pickUpgradeable(run) {
   const list = run.deck.filter(c => !c.upgraded);
@@ -135,6 +135,7 @@ export const EVENT_DB = {
           const relicId = rollRelicReward(run.relics);
           if (relicId) {
             run.relics.push(relicId);
+            applyRelicPickupEffect(run, relicId);
             return `HPを8失ったが、「${relicName(relicId)}」を手に入れた。`;
           }
           return 'HPを8失ったが、これ以上遺物は見つからなかった。';

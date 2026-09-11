@@ -40,7 +40,7 @@ const CARD_DB = {
   },
   cleave: {
     name: '薙ぎ払い', type: 'attack', cost: 1, rarity: 'common', target: 'all',
-    values: { dmg: 6 }, upgradedValues: { dmg: 9 },
+    values: { dmg: 7 }, upgradedValues: { dmg: 10 },
     desc: v => `敵全体に${v.dmg}ダメージ。`,
     effects: v => [{ type: 'damage', amount: v.dmg, target: 'all' }],
   },
@@ -121,8 +121,8 @@ const CARD_DB = {
     effects: v => [{ type: 'executeDamage', amount: v.dmg, amountLow: v.dmgLowHp }],
   },
   barrage: {
-    name: '乱れ撃ち', type: 'attack', cost: 3, rarity: 'uncommon', target: 'all',
-    values: { dmg: 10 }, upgradedValues: { dmg: 14 },
+    name: '乱れ撃ち', type: 'attack', cost: 2, rarity: 'uncommon', target: 'all',
+    values: { dmg: 12 }, upgradedValues: { dmg: 16 },
     desc: v => `敵全体に${v.dmg}ダメージ。`,
     effects: v => [{ type: 'damage', amount: v.dmg, target: 'all' }],
   },
@@ -190,8 +190,8 @@ const CARD_DB = {
     effects: v => [{ type: 'damage', amount: v.dmg }],
   },
   meteor: {
-    name: '隕石落とし', type: 'attack', cost: 4, rarity: 'rare', target: 'all',
-    values: { dmg: 18 }, upgradedValues: { dmg: 23 },
+    name: '隕石落とし', type: 'attack', cost: 3, rarity: 'rare', target: 'all',
+    values: { dmg: 22 }, upgradedValues: { dmg: 27 },
     desc: v => `敵全体に${v.dmg}ダメージ。`,
     effects: v => [{ type: 'damage', amount: v.dmg, target: 'all' }],
   },
