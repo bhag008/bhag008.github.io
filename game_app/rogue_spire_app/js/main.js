@@ -1,6 +1,7 @@
 import {
   STARTER_DECK, makeCardInstance, cardDisplayName, cardDescription, cardCost,
-  cardType, cardTarget, cardPrice, rollCardRewards, allCardIds, getCardDef,
+  cardType, cardTarget, cardRarity, cardPrice, rollCardRewards, allCardIds, getCardDef,
+  RARITY_ORDER, RARITY_LABELS,
 } from './cards.js';
 import { relicName, relicDesc, rollRelicReward, rollBossRelicReward } from './relics.js';
 import { rollNormalEncounter, rollEliteEncounter, rollBossEncounter } from './enemies.js';
@@ -32,6 +33,15 @@ const STATUS_LABELS = { weak: '脱力', vulnerable: '弱体', frail: '防御低�
 
 function showScreen(id) {
   for (const s of screens) el(s).classList.toggle('hidden', s !== id);
+}
+
+function shuffledCopy(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 // ---------- Title ----------
@@ -239,6 +249,26 @@ function statusBadges(statuses) {
     .join('');
 }
 
+function typeLabel(type) {
+  return { attack: '攻撃', skill: 'スキル', power: 'パワー' }[type] || type;
+}
+
+function cardHtml(inst, extraClass = '', extraContentHtml = '') {
+  const type = cardType(inst);
+  const rarity = cardRarity(inst);
+  const upgradePreview = inst.upgraded
+    ? ''
+    : `<div class="card-upgrade-desc">強化+: ${cardDescription(makeCardInstance(inst.defId, true))}</div>`;
+  return `<div class="card ${extraClass} type-${type}" data-uid="${inst.uid}">
+    <div class="card-cost">${cardCost(inst)}</div>
+    <div class="card-name">${cardDisplayName(inst)}</div>
+    <div class="card-type-tag">${typeLabel(type)} <span class="card-rarity rarity-${rarity}">${RARITY_LABELS[rarity]}</span></div>
+    <div class="card-desc">${cardDescription(inst)}</div>
+    ${upgradePreview}
+    ${extraContentHtml}
+  </div>`;
+}
+
 function renderCombat() {
   const p = combatEngine.player;
   el('combatHpText').textContent = `${p.hp}/${p.maxHp}${p.block > 0 ? ` 🛡${p.block}` : ''}`;
@@ -282,27 +312,14 @@ function renderCombat() {
   });
 
   el('handRow').innerHTML = combatEngine.hand.map(inst => {
-    const cost = cardCost(inst);
-    const type = cardType(inst);
-    const affordable = cost <= p.energy;
-    const classes = ['card', `type-${type}`];
-    if (!affordable) classes.push('unaffordable');
-    if (inst.uid === selectedCardUid) classes.push('selected');
-    return `<div class="${classes.join(' ')}" data-uid="${inst.uid}">
-      <div class="card-cost">${cost}</div>
-      <div class="card-name">${cardDisplayName(inst)}</div>
-      <div class="card-type-tag">${typeLabel(type)}</div>
-      <div class="card-desc">${cardDescription(inst)}</div>
-    </div>`;
+    const affordable = cardCost(inst) <= p.energy;
+    const extraClass = [!affordable ? 'unaffordable' : '', inst.uid === selectedCardUid ? 'selected' : ''].filter(Boolean).join(' ');
+    return cardHtml(inst, extraClass);
   }).join('');
 
   el('handRow').querySelectorAll('.card').forEach(cardEl => {
     cardEl.addEventListener('click', () => onHandCardClick(Number(cardEl.dataset.uid)));
   });
-}
-
-function typeLabel(type) {
-  return { attack: '攻撃', skill: 'スキル', power: 'パワー' }[type] || type;
 }
 
 function onHandCardClick(uid) {
@@ -344,7 +361,7 @@ el('btnEndTurn').addEventListener('click', () => {
   checkCombatEnd();
 });
 
-el('btnCombatDeckInfo').addEventListener('click', () => openDeckModal('山札一覧', run.deck));
+el('btnCombatDeckInfo').addEventListener('click', () => openDeckModal('残りの山札', shuffledCopy(combatEngine.drawPile)));
 
 function checkCombatEnd() {
   if (!combatEngine.result) return;
@@ -389,14 +406,7 @@ function showCardRewardScreen() {
   el('goldGainText').textContent = lastGoldGain > 0 ? `💰 ${lastGoldGain} ゴールドを獲得した` : '';
   lastGoldGain = 0;
   const options = rollCardRewards(3);
-  el('rewardCards').innerHTML = options.map(inst => `
-    <div class="card reward-card type-${cardType(inst)}" data-uid="${inst.uid}">
-      <div class="card-cost">${cardCost(inst)}</div>
-      <div class="card-name">${cardDisplayName(inst)}</div>
-      <div class="card-type-tag">${typeLabel(cardType(inst))}</div>
-      <div class="card-desc">${cardDescription(inst)}</div>
-    </div>
-  `).join('');
+  el('rewardCards').innerHTML = options.map(inst => cardHtml(inst, 'reward-card')).join('');
   el('rewardCards').querySelectorAll('.card').forEach(cardEl => {
     cardEl.addEventListener('click', () => {
       const inst = options.find(o => o.uid === Number(cardEl.dataset.uid));
@@ -424,14 +434,7 @@ function showRestScreen() {
   el('btnRestUpgrade').onclick = () => {
     const list = el('restUpgradeList');
     list.classList.remove('hidden');
-    list.innerHTML = run.deck.filter(c => !c.upgraded).map(inst => `
-      <div class="card deck-card type-${cardType(inst)}" data-uid="${inst.uid}">
-        <div class="card-cost">${cardCost(inst)}</div>
-        <div class="card-name">${cardDisplayName(inst)}</div>
-        <div class="card-type-tag">${typeLabel(cardType(inst))}</div>
-        <div class="card-desc">${cardDescription(inst)}</div>
-      </div>
-    `).join('');
+    list.innerHTML = run.deck.filter(c => !c.upgraded).map(inst => cardHtml(inst, 'deck-card')).join('');
     list.querySelectorAll('.card').forEach(cardEl => {
       cardEl.addEventListener('click', () => {
         const inst = run.deck.find(c => c.uid === Number(cardEl.dataset.uid));
@@ -457,13 +460,7 @@ function renderShop() {
   el('shopCards').innerHTML = currentShopStock.cards.map(inst => {
     const price = cardPrice(inst);
     const affordable = run.gold >= price;
-    return `<div class="card reward-card type-${cardType(inst)}${affordable ? '' : ' unaffordable-price'}" data-uid="${inst.uid}">
-      <div class="card-cost">${cardCost(inst)}</div>
-      <div class="card-name">${cardDisplayName(inst)}</div>
-      <div class="card-type-tag">${typeLabel(cardType(inst))}</div>
-      <div class="card-desc">${cardDescription(inst)}</div>
-      <div class="shop-item-price">💰${price}</div>
-    </div>`;
+    return cardHtml(inst, `reward-card${affordable ? '' : ' unaffordable-price'}`, `<div class="shop-item-price">💰${price}</div>`);
   }).join('');
   el('shopCards').querySelectorAll('.card').forEach(cardEl => {
     cardEl.addEventListener('click', () => {
@@ -511,14 +508,7 @@ function renderShop() {
   el('btnShopRemove').onclick = () => {
     const list = el('shopRemoveList');
     list.classList.remove('hidden');
-    list.innerHTML = run.deck.map(inst => `
-      <div class="card deck-card type-${cardType(inst)}" data-uid="${inst.uid}">
-        <div class="card-cost">${cardCost(inst)}</div>
-        <div class="card-name">${cardDisplayName(inst)}</div>
-        <div class="card-type-tag">${typeLabel(cardType(inst))}</div>
-        <div class="card-desc">${cardDescription(inst)}</div>
-      </div>
-    `).join('');
+    list.innerHTML = run.deck.map(inst => cardHtml(inst, 'deck-card')).join('');
     list.querySelectorAll('.card').forEach(cardEl => {
       cardEl.addEventListener('click', () => {
         if (run.gold < currentShopStock.removalPrice) return;
@@ -595,14 +585,7 @@ function handleGameOver() {
 // ---------- Deck modal ----------
 function openDeckModal(title, deck) {
   el('deckModalTitle').textContent = `${title} (${deck.length}枚)`;
-  el('deckModalList').innerHTML = deck.map(inst => `
-    <div class="card deck-card type-${cardType(inst)}">
-      <div class="card-cost">${cardCost(inst)}</div>
-      <div class="card-name">${cardDisplayName(inst)}</div>
-      <div class="card-type-tag">${typeLabel(cardType(inst))}</div>
-      <div class="card-desc">${cardDescription(inst)}</div>
-    </div>
-  `).join('');
+  el('deckModalList').innerHTML = deck.map(inst => cardHtml(inst, 'deck-card')).join('');
   el('deckModal').classList.remove('hidden');
 }
 
@@ -610,9 +593,6 @@ el('btnViewDeck').addEventListener('click', () => openDeckModal('デッキ', run
 el('btnCloseDeckModal').addEventListener('click', () => el('deckModal').classList.add('hidden'));
 
 // ---------- Card list (compendium) ----------
-const RARITY_LABELS = { basic: 'ベーシック', common: 'コモン', uncommon: 'アンコモン', rare: 'レア' };
-const RARITY_ORDER = ['basic', 'common', 'uncommon', 'rare'];
-
 function renderCardListModal() {
   const ids = allCardIds();
   let html = '';
@@ -620,17 +600,7 @@ function renderCardListModal() {
     const idsInRarity = ids.filter(id => getCardDef(id).rarity === rarity);
     if (!idsInRarity.length) continue;
     html += `<h4 class="card-list-group">${RARITY_LABELS[rarity]}</h4><div class="card-list-grid">`;
-    html += idsInRarity.map(id => {
-      const base = makeCardInstance(id, false);
-      const upgraded = makeCardInstance(id, true);
-      return `<div class="card list-card type-${cardType(base)}">
-        <div class="card-cost">${cardCost(base)}</div>
-        <div class="card-name">${cardDisplayName(base)}</div>
-        <div class="card-type-tag">${typeLabel(cardType(base))}</div>
-        <div class="card-desc">${cardDescription(base)}</div>
-        <div class="card-upgrade-desc">強化+: ${cardDescription(upgraded)}</div>
-      </div>`;
-    }).join('');
+    html += idsInRarity.map(id => cardHtml(makeCardInstance(id, false), 'list-card')).join('');
     html += `</div>`;
   }
   el('cardListModalBody').innerHTML = html;

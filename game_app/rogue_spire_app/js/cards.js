@@ -256,6 +256,13 @@ export function cardType(instance) {
   return getCardDef(instance.defId).type;
 }
 
+export function cardRarity(instance) {
+  return getCardDef(instance.defId).rarity;
+}
+
+export const RARITY_ORDER = ['basic', 'common', 'uncommon', 'rare'];
+export const RARITY_LABELS = { basic: 'ベーシック', common: 'コモン', uncommon: 'アンコモン', rare: 'レア' };
+
 export function cardTarget(instance) {
   return getCardDef(instance.defId).target;
 }
