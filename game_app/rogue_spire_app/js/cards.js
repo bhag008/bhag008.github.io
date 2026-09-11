@@ -220,6 +220,10 @@ export function allRewardEligibleIds() {
   return Object.keys(CARD_DB).filter(id => CARD_DB[id].rarity !== 'basic');
 }
 
+export function allCardIds() {
+  return Object.keys(CARD_DB);
+}
+
 export function randomCardIdByRarity(rarity) {
   const pool = Object.keys(CARD_DB).filter(id => CARD_DB[id].rarity === rarity);
   if (pool.length === 0) return null;

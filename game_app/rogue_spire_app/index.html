@@ -22,6 +22,7 @@
       <div class="title-buttons">
         <button id="btnContinue" class="btn btn-primary hidden">つづきから</button>
         <button id="btnNewRun" class="btn btn-primary">新しいランを始める</button>
+        <button id="btnCardListTitle" class="btn btn-ghost">カード一覧</button>
       </div>
       <p class="title-hint">デッキを育て、灰塔の頂を目指せ。倒れれば最初から。</p>
     </div>
@@ -40,6 +41,7 @@
       <div id="relicRow" class="relic-row"></div>
       <div class="topbar-actions">
         <button id="btnViewDeck" class="btn btn-small">デッキ</button>
+        <button id="btnCardListMap" class="btn btn-small">図鑑</button>
       </div>
     </header>
     <div id="mapScroll" class="map-scroll">
@@ -147,6 +149,16 @@
         <button id="btnCloseDeckModal" class="btn btn-small">閉じる</button>
       </div>
       <div id="deckModalList" class="deck-modal-list"></div>
+    </div>
+  </div>
+
+  <div id="cardListModal" class="modal hidden">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h3>カード一覧</h3>
+        <button id="btnCloseCardListModal" class="btn btn-small">閉じる</button>
+      </div>
+      <div id="cardListModalBody" class="card-list-body"></div>
     </div>
   </div>
 

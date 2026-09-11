@@ -1,6 +1,6 @@
 import {
   STARTER_DECK, makeCardInstance, cardDisplayName, cardDescription, cardCost,
-  cardType, cardTarget, cardPrice, rollCardRewards,
+  cardType, cardTarget, cardPrice, rollCardRewards, allCardIds, getCardDef,
 } from './cards.js';
 import { relicName, relicDesc, rollRelicReward, rollBossRelicReward } from './relics.js';
 import { rollNormalEncounter, rollEliteEncounter, rollBossEncounter } from './enemies.js';
@@ -608,6 +608,38 @@ function openDeckModal(title, deck) {
 
 el('btnViewDeck').addEventListener('click', () => openDeckModal('デッキ', run.deck));
 el('btnCloseDeckModal').addEventListener('click', () => el('deckModal').classList.add('hidden'));
+
+// ---------- Card list (compendium) ----------
+const RARITY_LABELS = { basic: 'ベーシック', common: 'コモン', uncommon: 'アンコモン', rare: 'レア' };
+const RARITY_ORDER = ['basic', 'common', 'uncommon', 'rare'];
+
+function renderCardListModal() {
+  const ids = allCardIds();
+  let html = '';
+  for (const rarity of RARITY_ORDER) {
+    const idsInRarity = ids.filter(id => getCardDef(id).rarity === rarity);
+    if (!idsInRarity.length) continue;
+    html += `<h4 class="card-list-group">${RARITY_LABELS[rarity]}</h4><div class="card-list-grid">`;
+    html += idsInRarity.map(id => {
+      const base = makeCardInstance(id, false);
+      const upgraded = makeCardInstance(id, true);
+      return `<div class="card list-card type-${cardType(base)}">
+        <div class="card-cost">${cardCost(base)}</div>
+        <div class="card-name">${cardDisplayName(base)}</div>
+        <div class="card-type-tag">${typeLabel(cardType(base))}</div>
+        <div class="card-desc">${cardDescription(base)}</div>
+        <div class="card-upgrade-desc">強化+: ${cardDescription(upgraded)}</div>
+      </div>`;
+    }).join('');
+    html += `</div>`;
+  }
+  el('cardListModalBody').innerHTML = html;
+  el('cardListModal').classList.remove('hidden');
+}
+
+el('btnCardListTitle').addEventListener('click', renderCardListModal);
+el('btnCardListMap').addEventListener('click', renderCardListModal);
+el('btnCloseCardListModal').addEventListener('click', () => el('cardListModal').classList.add('hidden'));
 
 // ---------- Init ----------
 renderTitle();
