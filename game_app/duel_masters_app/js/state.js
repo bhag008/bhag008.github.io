@@ -8,6 +8,12 @@ export function nextUid() {
   return uidCounter++;
 }
 
+// デッキIDはlocalStorageに永続化され複数セッションをまたいで共存するため、
+// セッション毎にリセットされるnextUid()ではなく、常にグローバルに一意な値を発行する
+export function newDeckId() {
+  return `deck_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
 export function makeDefaultMeta() {
   return { gamesPlayed: 0, wins: 0, losses: 0 };
 }

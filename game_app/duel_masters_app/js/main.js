@@ -6,12 +6,27 @@ import {
 import { DuelEngine } from './engine.js';
 import { cpuTurnSteps, chooseBlockForCPU, autoResolveShieldTriggers } from './ai.js';
 import { CPU_DECKS, getCpuDeck } from './decks.js';
-import { loadDecks, saveDecks, nextUid, loadMeta, saveMeta } from './state.js';
+import { loadDecks, saveDecks, newDeckId, loadMeta, saveMeta } from './state.js';
 
 const $ = (id) => document.getElementById(id);
 
 let decksData = loadDecks();
 let meta = loadMeta();
+
+// 過去のバグ(セッション毎にリセットされるnextUid()でデッキIDを採番していたため、
+// 別セッションで作成したデッキ同士がID重複することがあった)で保存された重複IDを修復する
+{
+  const seenIds = new Set();
+  let repaired = false;
+  for (const d of decksData.decks) {
+    if (d.id == null || seenIds.has(d.id)) {
+      d.id = newDeckId();
+      repaired = true;
+    }
+    seenIds.add(d.id);
+  }
+  if (repaired) saveDecks(decksData);
+}
 
 let engine = null;
 let cpuGen = null;
@@ -74,6 +89,8 @@ function labelForCandidate(side, kind, uid) {
   else if (kind === 'ownHandCard') inst = engine.players[side].hand.find((c) => c.uid === uid);
   else if (kind === 'deckTutor') inst = engine.players[side].deck.find((c) => c.uid === uid);
   else if (kind === 'enemyManaCard') inst = engine.players[opp].mana.find((c) => c.uid === uid);
+  else if (kind === 'ownManaCard') inst = engine.players[side].mana.find((c) => c.uid === uid);
+  else if (kind === 'shieldQuantity') return `${uid}枚`;
   if (!inst) return '(不明なカード)';
   const d = inst.stack ? engine.cardOf(inst) : getCard(inst.cardId);
   return `${d.name}${d.power != null ? ` (P${d.power})` : ''}`;
@@ -223,7 +240,7 @@ function renderCivTabs() {
 function renderSetTabs() {
   const tabs = $('setTabs');
   tabs.innerHTML = '';
-  const options = [['all', 'すべて'], ['DM-01', '第1弾'], ['DM-02', '第2弾']];
+  const options = [['all', 'すべて'], ['DM-01', '第1弾'], ['DM-02', '第2弾'], ['DM-03', '第3弾']];
   for (const [value, label] of options) {
     const b = document.createElement('button');
     b.className = 'btn btn-small set-tab' + (editSetFilter === value ? ' active' : '');
@@ -250,7 +267,7 @@ function cardMiniCard(def, count) {
   const div = document.createElement('div');
   div.className = 'mini-card civ-' + def.civ;
   const kw = keywordBadges(def);
-  const setLabel = cardSet(def) === 'DM-02' ? '第2弾' : '第1弾';
+  const setLabel = cardSet(def) === 'DM-03' ? '第3弾' : cardSet(def) === 'DM-02' ? '第2弾' : '第1弾';
   div.innerHTML = `
     <div class="mini-card-top">
       <span class="mini-cost">${def.cost}</span>
@@ -334,7 +351,7 @@ $('btnSaveDeck').onclick = () => {
   const errors = validateDeck(editingDeck.cardIds);
   if (errors.length) { $('deckValidationMsg').textContent = errors.join(' / '); return; }
   if (editingDeck.id == null) {
-    decksData.decks.push({ id: 'deck_' + nextUid(), name: editingDeck.name || '名称未設定', cardIds: editingDeck.cardIds });
+    decksData.decks.push({ id: newDeckId(), name: editingDeck.name || '名称未設定', cardIds: editingDeck.cardIds });
   } else {
     const d = decksData.decks.find((x) => x.id === editingDeck.id);
     d.name = editingDeck.name || '名称未設定';

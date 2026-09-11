@@ -51,6 +51,17 @@ function sortCandidates(engine, side, spec, candidates) {
       const ob = engine.players[engine.opponent(side)].mana.find((x) => x.uid === b);
       return getCard(ob.cardId).cost - getCard(oa.cardId).cost;
     });
+  } else if (spec.kind === 'ownManaCard') {
+    pool.sort((a, b) => {
+      const oa = engine.players[side].mana.find((x) => x.uid === a);
+      const ob = engine.players[side].mana.find((x) => x.uid === b);
+      const diff = getCard(oa.cardId).cost - getCard(ob.cardId).cost;
+      return spec.intent === 'harmful' ? diff : -diff;
+    });
+  } else if (spec.kind === 'shieldQuantity') {
+    const maxQty = Math.max(...pool);
+    const desired = Math.min(2, maxQty);
+    pool.sort((a, b) => (a === desired ? -1 : b === desired ? 1 : 0));
   }
   return pool;
 }
