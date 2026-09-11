@@ -36,6 +36,7 @@ export function keywordValue(def, key) { return def.keywords ? def.keywords[key]
 export function isBlocker(def) { return hasKeyword(def, 'blocker'); }
 export function isDoubleBreaker(def) { return hasKeyword(def, 'doubleBreaker'); }
 export function hasShieldTrigger(def) { return hasKeyword(def, 'shieldTrigger'); }
+export function cardSet(def) { return def.set || 'DM-01'; }
 
 // ================= 効果ファクトリ =================
 const destroyEnemyOne = (min, max, filter) => ({

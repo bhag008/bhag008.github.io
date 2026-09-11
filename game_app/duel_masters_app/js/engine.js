@@ -258,25 +258,21 @@ export class DuelEngine {
     return Math.max(cost, minCost, 0);
   }
 
+  // 文明はマナゾーンに存在してさえいればよく(タップ状態は問わない)、実際にタップする札とは
+  // 無関係に判定する(デュエルマスタープレイスと同じ仕様)。数量さえ足りればどの札をタップしてもよい。
   canPayCost(side, def) {
     const cost = this.effectiveCost(side, def);
     const untapped = this.untappedMana(side);
     if (untapped.length < cost) return false;
-    return cost === 0 || untapped.some((m) => getCard(m.cardId).civ === def.civ);
+    if (cost === 0) return true;
+    return this.players[side].mana.some((m) => getCard(m.cardId).civ === def.civ);
   }
 
   payCost(side, def) {
     const cost = this.effectiveCost(side, def);
     const ps = this.players[side];
     const untapped = ps.mana.filter((m) => !m.tapped);
-    const civIdx = untapped.findIndex((m) => getCard(m.cardId).civ === def.civ);
-    const toTap = [];
-    if (civIdx !== -1) toTap.push(untapped[civIdx]);
-    for (const m of untapped) {
-      if (toTap.length >= cost) break;
-      if (!toTap.includes(m)) toTap.push(m);
-    }
-    for (const m of toTap) m.tapped = true;
+    for (let i = 0; i < cost && i < untapped.length; i++) untapped[i].tapped = true;
   }
 
   // 自分のマナゾーンからN枚、墓地に送る(コスト/CIPの一部) - どの札を送るかは自動選択
@@ -830,7 +826,8 @@ export class DuelEngine {
       const shield = ps.shields.pop();
       ps.hand.push(shield);
       const def = getCard(shield.cardId);
-      this.logMsg(`${labelOf(side)}のシールドが1枚ブレイクされた。(${def.name})`);
+      // ブレイクされたカードの正体は、シールド・トリガーとして実際に使用されるまで非公開にする
+      this.logMsg(`${labelOf(side)}のシールドが1枚ブレイクされた。`);
       if (hasShieldTrigger(def)) {
         this.pendingShieldTriggers.push({ side, uid: shield.uid, cardId: shield.cardId });
       }

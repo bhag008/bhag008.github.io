@@ -1,6 +1,6 @@
 // 画面遷移とDOM描画、ユーザー操作のワイヤリング
 import {
-  getCard, cardsByCivilization, CIVILIZATIONS, isBlocker, isDoubleBreaker,
+  getCard, allCards, cardsByCivilization, cardSet, CIVILIZATIONS, isBlocker, isDoubleBreaker,
   hasShieldTrigger, validateDeck, DECK_MIN_SIZE, MAX_COPIES,
 } from './cards.js';
 import { DuelEngine } from './engine.js';
@@ -18,7 +18,14 @@ let cpuGen = null;
 let manaChargeMode = false;
 let selectedAttackerUid = null;
 let editingDeck = null; // { id: string|null, name: string, cardIds: string[] }
-let editCivFilter = 'fire';
+let editCivFilter = 'all';
+let editSetFilter = 'all';
+let editCostMin = null;
+let editCostMax = null;
+let editPowerMin = null;
+let editPowerMax = null;
+let editSortKey = 'name';
+let editSortDir = 'asc';
 let selectedPlayerDeckId = null;
 let selectedCpuDeckId = CPU_DECKS[0].id;
 
@@ -137,26 +144,91 @@ function renderDeckBuilderHome() {
 $('btnBackFromDeckbuilder').onclick = () => { renderTitle(); showScreen('screen-title'); };
 $('btnNewDeck').onclick = () => startEditDeck({ id: null, name: `新しいデッキ${decksData.decks.length + 1}`, cardIds: [] });
 
+function resetFilters() {
+  editCivFilter = 'all';
+  editSetFilter = 'all';
+  editCostMin = null;
+  editCostMax = null;
+  editPowerMin = null;
+  editPowerMax = null;
+  editSortKey = 'name';
+  editSortDir = 'asc';
+}
+
 function startEditDeck(deck) {
   editingDeck = { id: deck.id, name: deck.name, cardIds: [...deck.cardIds] };
   $('deckListPanel').classList.add('hidden');
   $('deckEditPanel').classList.remove('hidden');
   $('deckNameInput').value = editingDeck.name;
   $('btnDeleteDeck').classList.toggle('hidden', deck.id == null);
+  resetFilters();
+  $('costMinInput').value = '';
+  $('costMaxInput').value = '';
+  $('powerMinInput').value = '';
+  $('powerMaxInput').value = '';
+  $('sortKeySelect').value = editSortKey;
+  $('btnSortDir').textContent = '昇順 ▲';
   renderCivTabs();
+  renderSetTabs();
   renderDeckEditPanel();
 }
 $('deckNameInput').oninput = (e) => { if (editingDeck) editingDeck.name = e.target.value; };
 
+function parseFilterNumber(value) {
+  if (value === '' || value == null) return null;
+  const n = Number(value);
+  return Number.isNaN(n) ? null : n;
+}
+$('costMinInput').oninput = (e) => { editCostMin = parseFilterNumber(e.target.value); renderDeckEditPanel(); };
+$('costMaxInput').oninput = (e) => { editCostMax = parseFilterNumber(e.target.value); renderDeckEditPanel(); };
+$('powerMinInput').oninput = (e) => { editPowerMin = parseFilterNumber(e.target.value); renderDeckEditPanel(); };
+$('powerMaxInput').oninput = (e) => { editPowerMax = parseFilterNumber(e.target.value); renderDeckEditPanel(); };
+$('sortKeySelect').onchange = (e) => { editSortKey = e.target.value; renderDeckEditPanel(); };
+$('btnSortDir').onclick = () => {
+  editSortDir = editSortDir === 'asc' ? 'desc' : 'asc';
+  $('btnSortDir').textContent = editSortDir === 'asc' ? '昇順 ▲' : '降順 ▼';
+  renderDeckEditPanel();
+};
+$('btnClearFilters').onclick = () => {
+  resetFilters();
+  $('costMinInput').value = '';
+  $('costMaxInput').value = '';
+  $('powerMinInput').value = '';
+  $('powerMaxInput').value = '';
+  $('sortKeySelect').value = editSortKey;
+  $('btnSortDir').textContent = '昇順 ▲';
+  renderCivTabs();
+  renderSetTabs();
+  renderDeckEditPanel();
+};
+
 function renderCivTabs() {
   const tabs = $('civTabs');
   tabs.innerHTML = '';
+  const allBtn = document.createElement('button');
+  allBtn.className = 'btn btn-small civ-tab' + (editCivFilter === 'all' ? ' active' : '');
+  allBtn.textContent = 'すべて';
+  allBtn.onclick = () => { editCivFilter = 'all'; renderCivTabs(); renderDeckEditPanel(); };
+  tabs.appendChild(allBtn);
   for (const civ of Object.keys(CIVILIZATIONS)) {
     const b = document.createElement('button');
     b.className = 'btn btn-small civ-tab' + (civ === editCivFilter ? ' active' : '');
     b.style.setProperty('--civ-color', CIVILIZATIONS[civ].color);
     b.textContent = CIVILIZATIONS[civ].name;
     b.onclick = () => { editCivFilter = civ; renderCivTabs(); renderDeckEditPanel(); };
+    tabs.appendChild(b);
+  }
+}
+
+function renderSetTabs() {
+  const tabs = $('setTabs');
+  tabs.innerHTML = '';
+  const options = [['all', 'すべて'], ['DM-01', '第1弾'], ['DM-02', '第2弾']];
+  for (const [value, label] of options) {
+    const b = document.createElement('button');
+    b.className = 'btn btn-small set-tab' + (editSetFilter === value ? ' active' : '');
+    b.textContent = label;
+    b.onclick = () => { editSetFilter = value; renderSetTabs(); renderDeckEditPanel(); };
     tabs.appendChild(b);
   }
 }
@@ -178,17 +250,38 @@ function cardMiniCard(def, count) {
   const div = document.createElement('div');
   div.className = 'mini-card civ-' + def.civ;
   const kw = keywordBadges(def);
+  const setLabel = cardSet(def) === 'DM-02' ? '第2弾' : '第1弾';
   div.innerHTML = `
     <div class="mini-card-top">
       <span class="mini-cost">${def.cost}</span>
       <span class="mini-name">${escapeHtml(def.name)}</span>
       ${def.power != null ? `<span class="mini-power">P${def.power}</span>` : ''}
     </div>
-    <div class="mini-card-mid">${def.type === 'creature' ? escapeHtml(def.race || '') : '呪文'} (${def.rarity}) ${kw.map((k) => `<span class="badge badge-${k}">${k}</span>`).join('')}</div>
+    <div class="mini-card-mid">${def.type === 'creature' ? escapeHtml(def.race || '') : '呪文'} (${def.rarity}・${setLabel}) ${kw.map((k) => `<span class="badge badge-${k}">${k}</span>`).join('')}</div>
     <div class="mini-card-text">${escapeHtml(def.text || '')}</div>
     ${count != null ? `<div class="mini-count">採用: ${count}枚</div>` : ''}
   `;
   return div;
+}
+
+// フィルター・並び替え条件に従ってカードプールを絞り込む
+function filteredSortedPool() {
+  let list = editCivFilter === 'all' ? allCards() : cardsByCivilization(editCivFilter);
+  if (editSetFilter !== 'all') list = list.filter((d) => cardSet(d) === editSetFilter);
+  if (editCostMin != null) list = list.filter((d) => d.cost >= editCostMin);
+  if (editCostMax != null) list = list.filter((d) => d.cost <= editCostMax);
+  if (editPowerMin != null) list = list.filter((d) => d.power == null || d.power >= editPowerMin);
+  if (editPowerMax != null) list = list.filter((d) => d.power == null || d.power <= editPowerMax);
+  list = [...list].sort((a, b) => {
+    let cmp = 0;
+    if (editSortKey === 'cost') cmp = a.cost - b.cost;
+    else if (editSortKey === 'power') cmp = (a.power ?? -1) - (b.power ?? -1);
+    else if (editSortKey === 'civ') cmp = a.civ.localeCompare(b.civ);
+    else if (editSortKey === 'set') cmp = cardSet(a).localeCompare(cardSet(b));
+    if (cmp === 0) cmp = a.name.localeCompare(b.name, 'ja');
+    return editSortDir === 'desc' ? -cmp : cmp;
+  });
+  return list;
 }
 
 function renderDeckEditPanel() {
@@ -197,9 +290,11 @@ function renderDeckEditPanel() {
   $('deckValidationMsg').textContent = errors.length ? errors.join(' / ') : '条件を満たしています。';
   $('deckValidationMsg').classList.toggle('hint-ok', errors.length === 0);
 
+  const poolCards = filteredSortedPool();
+  $('cardPoolCount').textContent = String(poolCards.length);
   const pool = $('cardPoolList');
   pool.innerHTML = '';
-  for (const def of cardsByCivilization(editCivFilter)) {
+  for (const def of poolCards) {
     const count = countInDeck(def.id);
     const card = cardMiniCard(def, count);
     const addBtn = document.createElement('button');
@@ -328,6 +423,21 @@ function renderZoneCard(side, inst, opts = {}) {
   return div;
 }
 
+// マナゾーンの文明ごとの内訳(未タップ/合計)を、文明カラーのタグとして組み立てる
+function manaCivBreakdown(ps) {
+  const counts = {};
+  for (const m of ps.mana) {
+    const civ = getCard(m.cardId).civ;
+    if (!counts[civ]) counts[civ] = { total: 0, untapped: 0 };
+    counts[civ].total++;
+    if (!m.tapped) counts[civ].untapped++;
+  }
+  return Object.keys(CIVILIZATIONS)
+    .filter((civ) => counts[civ])
+    .map((civ) => `<span class="civ-tag mana-civ-tag" style="--civ-color:${CIVILIZATIONS[civ].color}">${CIVILIZATIONS[civ].name} ${counts[civ].untapped}/${counts[civ].total}</span>`)
+    .join('');
+}
+
 function renderBattle() {
   if (!engine) return;
   const opp = engine.players.cpu;
@@ -350,7 +460,7 @@ function renderBattle() {
       onClick: canBeAttacked ? () => performAttack({ type: 'creature', uid: c.uid }) : null,
     }));
   }
-  $('oppManaZone').innerHTML = `<span class="zone-label">CPUマナ: ${opp.mana.filter((m) => !m.tapped).length}/${opp.mana.length}</span>`;
+  $('oppManaZone').innerHTML = `<span class="zone-label">CPUマナ: ${opp.mana.filter((m) => !m.tapped).length}/${opp.mana.length}</span>${manaCivBreakdown(opp)}`;
 
   const selfBattle = $('selfBattleZone');
   selfBattle.innerHTML = '';
@@ -362,7 +472,7 @@ function renderBattle() {
       onClick: (myTurn && engine.phase === 'attack' && eligible) ? () => selectAttacker(c.uid) : null,
     }));
   }
-  $('selfManaZone').innerHTML = `<span class="zone-label">マナ: ${me.mana.filter((m) => !m.tapped).length}/${me.mana.length}</span>`;
+  $('selfManaZone').innerHTML = `<span class="zone-label">マナ: ${me.mana.filter((m) => !m.tapped).length}/${me.mana.length}</span>${manaCivBreakdown(me)}`;
 
   $('logPanel').innerHTML = engine.log.slice(-8).map((m) => `<div>${escapeHtml(m)}</div>`).join('');
   $('logPanel').scrollTop = $('logPanel').scrollHeight;

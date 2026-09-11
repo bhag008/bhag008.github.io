@@ -40,7 +40,37 @@
       <div id="deckCountDisplay" class="hint"></div>
       <div id="deckValidationMsg" class="hint"></div>
       <div id="civTabs" class="civ-tabs"></div>
-      <h3>カードプール</h3>
+      <div class="filter-panel">
+        <div class="filter-row">
+          <span class="filter-label">収録弾</span>
+          <div id="setTabs" class="set-tabs"></div>
+        </div>
+        <div class="filter-row">
+          <span class="filter-label">コスト</span>
+          <input id="costMinInput" type="number" min="0" placeholder="下限" class="filter-num">
+          <span class="filter-sep">〜</span>
+          <input id="costMaxInput" type="number" min="0" placeholder="上限" class="filter-num">
+        </div>
+        <div class="filter-row">
+          <span class="filter-label">パワー</span>
+          <input id="powerMinInput" type="number" min="0" step="500" placeholder="下限" class="filter-num">
+          <span class="filter-sep">〜</span>
+          <input id="powerMaxInput" type="number" min="0" step="500" placeholder="上限" class="filter-num">
+        </div>
+        <div class="filter-row">
+          <span class="filter-label">並び替え</span>
+          <select id="sortKeySelect" class="filter-select">
+            <option value="name">名前</option>
+            <option value="cost">コスト</option>
+            <option value="power">パワー</option>
+            <option value="civ">文明</option>
+            <option value="set">収録弾</option>
+          </select>
+          <button id="btnSortDir" class="btn btn-small">昇順 ▲</button>
+          <button id="btnClearFilters" class="btn btn-small btn-ghost">条件をリセット</button>
+        </div>
+      </div>
+      <h3>カードプール (<span id="cardPoolCount">0</span>件)</h3>
       <div id="cardPoolList" class="card-pool-list"></div>
       <h3>採用カード</h3>
       <div id="deckCardList" class="card-pool-list"></div>
