@@ -260,6 +260,126 @@ const peelTopOfEvolutionOne = (min, max) => ({
 });
 const peekOpponentHandAndShieldsAbility = () => ({ target: null, resolve(engine, side) { engine.peekOpponentHandAndShields(side); } });
 
+// ---- 第4弾で追加されたパターン ----
+const isRace = (race) => (engine, side, c) => engine.cardOf(c).race === race;
+const excludeAttacker = () => (engine, side, c) => !engine._resolvingAttackerUid || c.uid !== engine._resolvingAttackerUid;
+
+// 自分のマナゾーンにある、タップされていない指定文明のカードの枚数だけ、相手クリーチャーを選んでタップできる(彗星の精霊リムエル)
+const tapEnemyByOwnUntappedManaCiv = (civ) => ({
+  target: {
+    kind: 'enemyCreature', min: 0,
+    max: (engine, side) => engine.players[side].mana.filter((m) => !m.tapped && getCard(m.cardId).civ === civ).length,
+  },
+  resolve(engine, side, uids) {
+    const opp = engine.opponent(side);
+    for (const uid of uids) engine.tapCreature(opp, uid);
+  },
+});
+// 自分の墓地にある、指定した複数種族すべてを手札に戻す(キング・アクアカムイ)
+const graveyardRacesToHandAbility = (races) => ({
+  target: null,
+  resolve(engine, side) {
+    const ps = engine.players[side];
+    const matches = ps.graveyard.filter((c) => races.includes(getCard(c.cardId).race));
+    for (const c of matches) engine.graveyardCreatureToHand(side, c.uid);
+  },
+});
+const destroyAllExceptCivAbility = (civ) => ({ target: null, resolve(engine) { engine.destroyAllCreaturesExceptCiv(civ); } });
+const destroyCivPowerBothSidesAbility = (civ, maxPower) => ({ target: null, resolve(engine) { engine.destroyByCivAndPowerBothSides(civ, maxPower); } });
+const destroyExactPowerBothSidesAbility = (exactPower) => ({ target: null, resolve(engine) { engine.destroyByExactPowerBothSides(exactPower); } });
+const massTapExceptCivAbility = (civ) => ({ target: null, resolve(engine) { engine.massTapExceptCiv(civ); } });
+const revealTopTakeCivsAbility = (n, civs) => ({ target: null, resolve(engine, side) { engine.revealTopTakeCivs(side, n, civs); } });
+const deckTopToShieldAbility = (n) => ({ target: null, resolve(engine, side) { engine.deckTopToShield(side, n); } });
+const grantTeamBlockerAbility = () => ({ target: null, resolve(engine, side) { engine.grantTeamBlockerThisTurn(side); } });
+const hydroHurricaneAbility = () => ({ target: null, resolve(engine, side) { engine.hydroHurricaneEffect(side); } });
+const bounceEnemyManaOne = (min, max) => ({
+  target: { kind: 'enemyManaCard', min, max },
+  resolve(engine, side, uids) {
+    const opp = engine.opponent(side);
+    for (const uid of uids) engine.manaCardToHand(opp, uid);
+  },
+});
+// 自分の他のダーク文明クリーチャーの数だけ、相手の手札をランダムに捨てさせる(凶骨の邪将クエイクス)
+const discardOpponentPerOtherOwnCivAbility = (civ) => ({
+  target: null,
+  resolve(engine, side) {
+    const count = engine.players[side].battle.filter((c) => c.uid !== engine._resolvingCipUid && engine.cardOf(c).civ === civ).length;
+    if (count > 0) engine.discardRandomFromHand(engine.opponent(side), count);
+  },
+});
+// 相手の光クリーチャーの数だけ、相手自身に手札を選んで捨てさせる(手札がそれ以下ならすべて捨てる)。選択は簡略化のためコスト最低のものを自動選択(ソウル・イーター)
+const forceDiscardPerOpponentCivAbility = (civ) => ({
+  target: null,
+  resolve(engine, side) {
+    const opp = engine.opponent(side);
+    const count = engine.players[opp].battle.filter((c) => engine.cardOf(c).civ === civ).length;
+    if (count > 0) engine.forceDiscardWorstN(opp, count);
+  },
+});
+// このターンの攻撃中、自分のマナゾーンにある指定文明のカード1枚につき、自分のクリーチャーすべてのパワーが上がる(デーモン・ソード)
+const attackBuffPerOwnManaCivAbility = (civ, amount) => ({
+  target: null,
+  resolve(engine, side) {
+    const count = engine.players[side].mana.filter((m) => getCard(m.cardId).civ === civ).length;
+    if (count > 0) engine.teamAttackBuff(side, amount * count);
+  },
+});
+// このターン、自分のバトルゾーンにある指定文明のクリーチャー1体につき、自分のクリーチャーすべてのパワーが上がる(常時。攻撃中に限らない)(ブレス・ソード)
+const staticBuffPerOwnCivAbility = (civ, amount) => ({
+  target: null,
+  resolve(engine, side) {
+    const count = engine.players[side].battle.filter((c) => engine.cardOf(c).civ === civ).length;
+    if (count > 0) engine.teamStaticBuff(side, amount * count);
+  },
+});
+// 好きな枚数を自分のマナゾーンから墓地に置き、同じ枚数だけドローする(悪魔の契約)
+const manaToGraveyardThenDraw = () => ({
+  target: { kind: 'ownManaCard', min: 0, max: (engine, side) => engine.players[side].mana.length, intent: 'harmful' },
+  resolve(engine, side, uids) {
+    for (const uid of uids) engine.manaCardToGraveyard(side, uid);
+    if (uids.length > 0) engine.drawCardsSafe(side, uids.length);
+  },
+});
+// 手札を好きな枚数捨て、同じ数の自分のクリーチャーに「W・ブレイカー」を与える。対象クリーチャーは簡略化のため、攻撃可能なものから優先して自動選択する(メガ・ブラスター)
+const discardThenGrantDoubleBreakerToN = () => ({
+  target: { kind: 'ownHandCard', min: 0, max: (engine, side) => engine.players[side].hand.length },
+  resolve(engine, side, uids) {
+    for (const uid of uids) {
+      const ps = engine.players[side];
+      const idx = ps.hand.findIndex((c) => c.uid === uid);
+      if (idx !== -1) { const [c] = ps.hand.splice(idx, 1); ps.graveyard.push(c); }
+    }
+    const n = Math.min(uids.length, engine.players[side].battle.length);
+    if (n === 0) return;
+    const ranked = [...engine.players[side].battle].sort((a, b) => {
+      const aReady = !a.tapped && !a.sickness ? 1 : 0;
+      const bReady = !b.tapped && !b.sickness ? 1 : 0;
+      if (aReady !== bReady) return bReady - aReady;
+      return engine.powerBase(side, b) - engine.powerBase(side, a);
+    });
+    for (let i = 0; i < n; i++) ranked[i].tempDoubleBreaker = true;
+  },
+});
+// 攻撃時、自分の他のクリーチャーを1体生け贄に捧げてもよい。捧げたなら、このターンパワー+2000とW・ブレイカーを得る(スリーアイズ・ドラゴンフライ)
+const sacrificeOnAttackForBuff = (amount) => ({
+  target: { kind: 'ownCreature', min: 0, max: 1, filter: excludeAttacker(), intent: 'harmful' },
+  resolve(engine, side, uids) {
+    if (uids[0] == null) return;
+    engine.destroyCreature(side, uids[0]);
+    engine.grantAttackBuff(side, engine._resolvingAttackerUid, amount, true);
+  },
+});
+// 相手のクリーチャーを2体まで破壊する。自分のクリーチャーがいれば、その中から最も弱いもの1体も破壊する(いけにえの鎖)
+const destroyEnemyUpToTwoWithSelfSacrifice = () => ({
+  target: { kind: 'enemyCreature', min: 0, max: 2 },
+  resolve(engine, side, uids) {
+    const opp = engine.opponent(side);
+    for (const uid of uids) engine.destroyCreature(opp, uid);
+    const weakest = engine.pickWeakestOwnCreatureUid(side);
+    if (weakest != null) engine.destroyCreature(side, weakest);
+  },
+});
+
 const CARD_DB = {
   // ===================== 火文明 (24) =====================
   crimsonWyvern: {
@@ -1882,6 +2002,398 @@ const CARD_DB = {
         engine.millOwnShieldRandom(side);
       },
     },
+  },
+
+  // ===================== 第4弾(DM-04) 火文明 (10) =====================
+  garukuraifuDragon: {
+    id: 'garukuraifuDragon', name: 'ガルクライフ・ドラゴン', civ: 'fire', type: 'creature', rarity: 'SR', set: 'DM-04',
+    cost: 7, power: 6000, race: 'アーマード・ドラゴン',
+    text: 'W・ブレイカー。このクリーチャーがバトルゾーンに出たとき、バトルゾーンにあるパワー4000以下の光のクリーチャーすべてを、持ち主の墓地に置く。',
+    keywords: { doubleBreaker: true },
+    onPlay: destroyCivPowerBothSidesAbility('light', 4000),
+  },
+  chokyoganjuDoborugaiza: {
+    id: 'chokyoganjuDoborugaiza', name: '超巨岩獣ドボルガイザー', civ: 'fire', type: 'creature', rarity: 'VR', set: 'DM-04',
+    cost: 6, power: 8000, race: 'ロック・ビースト',
+    text: '進化：自分のロック・ビースト1体の上に置く。W・ブレイカー。このクリーチャーがバトルゾーンに出たとき、バトルゾーンにあるパワー3000以下の相手のクリーチャーを1体選び、持ち主の墓地に置いてもよい。',
+    keywords: { doubleBreaker: true },
+    onPlay: destroyEnemyOne(0, 1, powerAtMost(3000)),
+    evolution: { requirementText: '進化：自分のロック・ビースト1体の上に置く。', fromRaces: ['ロック・ビースト'] },
+  },
+  chaoticWyvern: {
+    id: 'chaoticWyvern', name: 'カオティック・ワイバーン', civ: 'fire', type: 'creature', rarity: 'R', set: 'DM-04',
+    cost: 5, power: 4000, race: 'アーマード・ワイバーン',
+    text: 'このクリーチャーがバトルゾーンにある間、バトルゾーンにあるすべてのデーモン・コマンドは「パワーアタッカー+4000」と「W・ブレイカー」を得る。',
+    keywords: { symmetricAura: { matchRace: 'デーモン・コマンド', powerAttackerBonus: 4000, grantsDoubleBreaker: true } },
+  },
+  magmaTyranosu: {
+    id: 'magmaTyranosu', name: 'マグマティラノス', civ: 'fire', type: 'creature', rarity: 'R', set: 'DM-04',
+    cost: 5, power: 3000, race: 'ロック・ビースト',
+    text: 'S・トリガー。このクリーチャーがバトルゾーンに出たとき、バトルゾーンにあるパワー1000のクリーチャーすべてを、持ち主の墓地に置く。',
+    keywords: { shieldTrigger: true },
+    onPlay: destroyExactPowerBothSidesAbility(1000),
+  },
+  megaBlaster: {
+    id: 'megaBlaster', name: 'メガ・ブラスター', civ: 'fire', type: 'spell', rarity: 'R', set: 'DM-04',
+    cost: 2,
+    text: '自分の手札から好きな枚数を選び、自分の墓地に置く。その後、その枚数と同じ数の自分のクリーチャーをバトルゾーンから選ぶ。このターン、選ばれたクリーチャーは「W・ブレイカー」を得る。',
+    spell: discardThenGrantDoubleBreakerToN(),
+  },
+  bakudankozoMissileBoy: {
+    id: 'bakudankozoMissileBoy', name: '爆弾小僧ミサイルボーイ', civ: 'fire', type: 'creature', rarity: 'UC', set: 'DM-04',
+    cost: 3, power: 1000, race: 'ヒューマノイド',
+    text: 'このクリーチャーがバトルゾーンにある間、光のクリーチャーを召喚するコストと光の呪文を唱えるコストは、それぞれ+1される。',
+    keywords: { taxCiv: { civ: 'light', amount: 1 } },
+  },
+  demonSword: {
+    id: 'demonSword', name: 'デーモン・ソード', civ: 'fire', type: 'spell', rarity: 'UC', set: 'DM-04',
+    cost: 4,
+    text: 'このターンの攻撃中、バトルゾーンにある自分のクリーチャーすべてのパワーは、自分のマナゾーンにある闇のカード1枚につき+1000される。',
+    spell: attackBuffPerOwnManaCivAbility('dark', 1000),
+  },
+  pippiKuppy: {
+    id: 'pippiKuppy', name: 'ピッピ・クッピー', civ: 'fire', type: 'creature', rarity: 'C', set: 'DM-04',
+    cost: 2, power: 1000, race: 'ファイアー・バード',
+    text: 'バトルゾーンにあるアーマード・ドラゴンすべてのパワーは+1000される。',
+    keywords: { symmetricAura: { matchRace: 'アーマード・ドラゴン', powerBonus: 1000 } },
+  },
+  bakuretsuheiDarkBlaster: {
+    id: 'bakuretsuheiDarkBlaster', name: '爆裂兵ダーク・ブラスター', civ: 'fire', type: 'creature', rarity: 'C', set: 'DM-04',
+    cost: 3, power: 2000, race: 'ドラゴノイド',
+    text: 'バトルゾーンに自分の闇のクリーチャーがある間、このクリーチャーのパワーは+2000される。',
+    keywords: { staticPowerBonusIfOwnCivPresent: { civ: 'dark', amount: 2000 } },
+  },
+  sojinheiKamikaze: {
+    id: 'sojinheiKamikaze', name: '双神兵カミカゼ', civ: 'fire', type: 'creature', rarity: 'C', set: 'DM-04',
+    cost: 2, power: 1000, race: 'アーマロイド',
+    text: 'S・トリガー。',
+    keywords: { shieldTrigger: true },
+  },
+
+  // ===================== 第4弾(DM-04) 水文明 (10) =====================
+  kingAquakamui: {
+    id: 'kingAquakamui', name: 'キング・アクアカムイ', civ: 'water', type: 'creature', rarity: 'SR', set: 'DM-04',
+    cost: 7, power: 5000, race: 'リヴァイアサン',
+    text: 'このクリーチャーをバトルゾーンに出した時、エンジェル・コマンドとデーモン・コマンドをすべて、自分の墓地から手札に戻してもよい。バトルゾーンにあるエンジェル・コマンドとデーモン・コマンドすべてのパワーは+2000される。',
+    keywords: { symmetricAura: { matchRace: ['エンジェル・コマンド', 'デーモン・コマンド'], powerBonus: 2000 } },
+    onPlay: graveyardRacesToHandAbility(['エンジェル・コマンド', 'デーモン・コマンド']),
+  },
+  astralLeaf: {
+    id: 'astralLeaf', name: 'アストラル・リーフ', civ: 'water', type: 'creature', rarity: 'VR', set: 'DM-04',
+    cost: 2, power: 4000, race: 'サイバー・ウイルス',
+    text: '進化：自分のサイバー・ウイルス1体の上に置く。このクリーチャーが出た時、カードを3枚引いてもよい。',
+    onPlay: drawAlways(3),
+    evolution: { requirementText: '進化：自分のサイバー・ウイルス1体の上に置く。', fromRaces: ['サイバー・ウイルス'] },
+  },
+  smileAngler: {
+    id: 'smileAngler', name: 'スマイル・アングラー', civ: 'water', type: 'creature', rarity: 'R', set: 'DM-04',
+    cost: 6, power: 3000, race: 'ゲル・フィッシュ',
+    text: 'このクリーチャーが攻撃する時、相手のマナゾーンからカードを1枚選び、持ち主の手札に戻してもよい。',
+    onAttack: bounceEnemyManaOne(0, 1),
+  },
+  aquan: {
+    id: 'aquan', name: 'アクアン', civ: 'water', type: 'creature', rarity: 'R', set: 'DM-04',
+    cost: 4, power: 2000, race: 'サイバーロード',
+    text: 'このクリーチャーが出た時、自分の山札の上から5枚を表向きにしてもよい。その中から光のカードと闇のカードをすべて手札に加え、残りを墓地に置く。',
+    onPlay: revealTopTakeCivsAbility(5, ['light', 'dark']),
+  },
+  hydroHurricane: {
+    id: 'hydroHurricane', name: 'ハイドロ・ハリケーン', civ: 'water', type: 'spell', rarity: 'R', set: 'DM-04',
+    cost: 6,
+    text: 'バトルゾーンにある自分の光のクリーチャー1体につきカードを1枚、相手のマナゾーンから選び、持ち主の手札に戻してもよい。バトルゾーンにある自分の闇のクリーチャー1体につき、バトルゾーンにある相手のクリーチャーを1体選び、持ち主の手札に戻してもよい。',
+    spell: hydroHurricaneAbility(),
+  },
+  hunterCluster: {
+    id: 'hunterCluster', name: 'ハンター・クラスター', civ: 'water', type: 'creature', rarity: 'UC', set: 'DM-04',
+    cost: 1, power: 1000, race: 'サイバー・クラスター',
+    text: 'S・トリガー。ブロッカー。',
+    keywords: { shieldTrigger: true, blocker: true },
+  },
+  cheerfulAbyss: {
+    id: 'cheerfulAbyss', name: 'チアフル・アビス', civ: 'water', type: 'creature', rarity: 'C', set: 'DM-04',
+    cost: 4, power: 2000, race: 'サイバー・ウイルス',
+    text: 'このクリーチャーがバトルゾーンにある間、バトルゾーンにある光と闇のクリーチャーすべてのパワーはそれぞれ+1000される。',
+    keywords: { symmetricAura: { matchCiv: ['light', 'dark'], powerBonus: 1000 } },
+  },
+  aquaCharger: {
+    id: 'aquaCharger', name: 'アクア・チャージャー', civ: 'water', type: 'creature', rarity: 'C', set: 'DM-04',
+    cost: 3, power: 2000, race: 'リキッド・ピープル',
+    text: 'S・トリガー。',
+    keywords: { shieldTrigger: true },
+  },
+  marineFlower: {
+    id: 'marineFlower', name: 'マリン・フラワー', civ: 'water', type: 'creature', rarity: 'C', set: 'DM-04',
+    cost: 1, power: 2000, race: 'サイバー・ウイルス',
+    text: 'ブロッカー。このクリーチャーは攻撃することができない。',
+    keywords: { blocker: true, cannotAttack: true },
+  },
+  cloneFactory: {
+    id: 'cloneFactory', name: 'クローン・ファクトリー', civ: 'water', type: 'spell', rarity: 'C', set: 'DM-04',
+    cost: 3,
+    text: '自分のマナゾーンから2枚まで選び、手札に戻してもよい。',
+    spell: manaCardToHandOne(0, 2),
+  },
+
+  // ===================== 第4弾(DM-04) 自然文明 (10) =====================
+  mamoriNoTsunoFiona: {
+    id: 'mamoriNoTsunoFiona', name: '護りの角フィオナ', civ: 'nature', type: 'creature', rarity: 'SR', set: 'DM-04',
+    cost: 6, power: 9000, race: 'ホーン・ビースト',
+    text: '進化：自分のホーン・ビースト1体の上に置く。W・ブレイカー。このクリーチャーをバトルゾーンに出した時、自分の山札を見る。その中から自然のクリーチャーを1体選び、相手に見せてから自分の手札に加えてもよい。その後、山札をシャッフルする。',
+    keywords: { doubleBreaker: true },
+    onPlay: deckTutor(0, 1, and(isCiv('nature'), isType('creature'))),
+    evolution: { requirementText: '進化：自分のホーン・ビースト1体の上に置く。', fromRaces: ['ホーン・ビースト'] },
+  },
+  ouenTulip: {
+    id: 'ouenTulip', name: '応援チューリップ', civ: 'nature', type: 'creature', rarity: 'VR', set: 'DM-04',
+    cost: 5, power: 4000, race: 'ツリーフォーク',
+    text: 'このクリーチャーがバトルゾーンにある間、バトルゾーンにあるすべてのエンジェル・コマンドは「パワーアタッカー+4000」を得る。',
+    keywords: { symmetricAura: { matchRace: 'エンジェル・コマンド', powerAttackerBonus: 4000 } },
+  },
+  inishieNoChojin: {
+    id: 'inishieNoChojin', name: 'いにしえの超人', civ: 'nature', type: 'creature', rarity: 'R', set: 'DM-04',
+    cost: 8, power: 9000, race: 'ジャイアント',
+    text: 'W・ブレイカー。このクリーチャーは、闇のクリーチャーにブロックされない。',
+    keywords: { doubleBreaker: true, cannotBeBlockedByCiv: 'dark' },
+  },
+  mysteryBreath: {
+    id: 'mysteryBreath', name: 'ミステリー・ブレス', civ: 'nature', type: 'spell', rarity: 'R', set: 'DM-04',
+    cost: 6,
+    text: '自分の山札の上から1枚目を、裏向きのまま自分のシールドに加える。',
+    spell: deckTopToShieldAbility(1),
+  },
+  breathSword: {
+    id: 'breathSword', name: 'ブレス・ソード', civ: 'nature', type: 'spell', rarity: 'R', set: 'DM-04',
+    cost: 2,
+    text: 'このターン、バトルゾーンにある自分の光のクリーチャー1体につき、バトルゾーンにある自分のクリーチャーすべてのパワーはそれぞれ+1000される。',
+    spell: staticBuffPerOwnCivAbility('light', 1000),
+  },
+  threeEyesDragonfly: {
+    id: 'threeEyesDragonfly', name: 'スリーアイズ・ドラゴンフライ', civ: 'nature', type: 'creature', rarity: 'UC', set: 'DM-04',
+    cost: 5, power: 4000, race: 'ジャイアント・インセクト',
+    text: 'このクリーチャーが攻撃するとき、相手がブロックする前に、バトルゾーンにある自分の他のクリーチャーを1体選び、墓地に置いてもよい。そうした場合、このターン、このクリーチャーのパワーは+2000され、「W・ブレイカー」を得る。',
+    onAttack: sacrificeOnAttackForBuff(2000),
+  },
+  kasumidake: {
+    id: 'kasumidake', name: 'カスミダケ', civ: 'nature', type: 'creature', rarity: 'UC', set: 'DM-04',
+    cost: 3, power: 1000, race: 'バルーン・マッシュルーム',
+    text: 'このクリーチャーがバトルゾーンにある間、闇のクリーチャーを召喚するコストと闇の呪文を唱えるコストは、それぞれ+1される。',
+    keywords: { taxCiv: { civ: 'dark', amount: 1 } },
+  },
+  shellCannon: {
+    id: 'shellCannon', name: 'シェル・キャノン', civ: 'nature', type: 'creature', rarity: 'C', set: 'DM-04',
+    cost: 4, power: 1000, race: 'コロニー・ビートル',
+    text: 'S・トリガー。このクリーチャーがバトルゾーンにある間、このクリーチャーのパワーは、自分のシールドゾーンにあるカード1枚につき+1000される。',
+    keywords: { shieldTrigger: true, powerPerOwnShieldCard: 1000 },
+  },
+  bakuhatsuSaboten: {
+    id: 'bakuhatsuSaboten', name: '爆発サボテン', civ: 'nature', type: 'creature', rarity: 'C', set: 'DM-04',
+    cost: 3, power: 2000, race: 'ツリーフォーク',
+    text: 'バトルゾーンに自分の光のクリーチャーがある間、このクリーチャーのパワーは+2000される。',
+    keywords: { staticPowerBonusIfOwnCivPresent: { civ: 'light', amount: 2000 } },
+  },
+  kokoNoNegai: {
+    id: 'kokoNoNegai', name: '孤高の願', civ: 'nature', type: 'creature', rarity: 'C', set: 'DM-04',
+    cost: 2, power: 1000, race: 'ビーストフォーク',
+    text: 'S・トリガー。',
+    keywords: { shieldTrigger: true },
+  },
+
+  // ===================== 第4弾(DM-04) 光文明 (15) =====================
+  suiseiNoSeireiRimuel: {
+    id: 'suiseiNoSeireiRimuel', name: '彗星の精霊リムエル', civ: 'light', type: 'creature', rarity: 'SR', set: 'DM-04',
+    cost: 8, power: 6000, race: 'エンジェル・コマンド',
+    text: 'W・ブレイカー。このクリーチャーがバトルゾーンに出たとき、自分のマナゾーンにあるタップされていない光のカード1枚につき、バトルゾーンにある相手のクリーチャーを1体選んでタップしてもよい。',
+    keywords: { doubleBreaker: true },
+    onPlay: tapEnemyByOwnUntappedManaCiv('light'),
+  },
+  seireiOArcadias: {
+    id: 'seireiOArcadias', name: '聖霊王アルカディアス', civ: 'light', type: 'creature', rarity: 'VR', set: 'DM-04',
+    cost: 6, power: 12500, race: 'エンジェル・コマンド',
+    text: '進化：自分のエンジェル・コマンド・クリーチャー1体の上に置く。W・ブレイカー。すべてのプレイヤーは、光ではない呪文を唱えられない。',
+    keywords: { doubleBreaker: true, lockNonCivSpells: 'light' },
+    evolution: { requirementText: '進化：自分のエンジェル・コマンド・クリーチャー1体の上に置く。', fromRaces: ['エンジェル・コマンド'] },
+  },
+  hishoNoSeireiAries: {
+    id: 'hishoNoSeireiAries', name: '飛翔の精霊アリエス', civ: 'light', type: 'creature', rarity: 'R', set: 'DM-04',
+    cost: 5, power: 9000, race: 'エンジェル・コマンド',
+    text: 'このクリーチャーは、タップされていない闇のクリーチャーを攻撃できる。このクリーチャーは、相手プレイヤーを攻撃できない。',
+    keywords: { canAttackUntappedOfCiv: 'dark', cannotAttackPlayer: true },
+  },
+  shufukuNoShitoOaks: {
+    id: 'shufukuNoShitoOaks', name: '修復の使徒オークス', civ: 'light', type: 'creature', rarity: 'R', set: 'DM-04',
+    cost: 5, power: 1000, race: 'イニシエート',
+    text: 'このクリーチャーがバトルゾーンから自分の墓地に置かれるとき、裏向きにして自分のシールドに加える。',
+    keywords: { onDestroy: 'shield' },
+  },
+  fullDefenser: {
+    id: 'fullDefenser', name: 'フル・ディフェンサー', civ: 'light', type: 'spell', rarity: 'R', set: 'DM-04',
+    cost: 2,
+    text: 'S・トリガー。自分の次のターンが始まるまで、バトルゾーンにある自分のクリーチャーはすべて「ブロッカー」を得る。',
+    keywords: { shieldTrigger: true },
+    spell: grantTeamBlockerAbility(),
+  },
+  seikyuNoGudoshaLeVeil: {
+    id: 'seikyuNoGudoshaLeVeil', name: '聖弓の求道者レ・ビール', civ: 'light', type: 'creature', rarity: 'UC', set: 'DM-04',
+    cost: 7, power: 6000, race: 'メカサンダー',
+    text: 'W・ブレイカー。バトルゾーンにある他の光のクリーチャーすべてのパワーは+2000される。',
+    keywords: { doubleBreaker: true, symmetricAura: { matchCiv: 'light', powerBonus: 2000 } },
+  },
+  bofuNoGudoshaFuReil: {
+    id: 'bofuNoGudoshaFuReil', name: '暴風の求道者フ・レイル', civ: 'light', type: 'creature', rarity: 'UC', set: 'DM-04',
+    cost: 6, power: 5000, race: 'メカサンダー',
+    text: 'このクリーチャーがバトルゾーンにある間、誰も闇のカードの「S・トリガー」を使えない。',
+    keywords: { lockShieldTriggerCiv: 'dark' },
+  },
+  rokokuNoDendoshiMillies: {
+    id: 'rokokuNoDendoshiMillies', name: '牢黒の伝道師ミリエス', civ: 'light', type: 'creature', rarity: 'UC', set: 'DM-04',
+    cost: 5, power: 2500, race: 'バーサーカー',
+    text: 'ブロッカー。このクリーチャーがバトルゾーンにある間、闇のクリーチャーを召喚するコストと闇の呪文を唱えるコストは、それぞれ+2される。',
+    keywords: { blocker: true, taxCiv: { civ: 'dark', amount: 2 } },
+  },
+  raimeiNoShugoshaMistLies: {
+    id: 'raimeiNoShugoshaMistLies', name: '雷鳴の守護者ミスト・リエス', civ: 'light', type: 'creature', rarity: 'UC', set: 'DM-04',
+    cost: 5, power: 2000, race: 'ガーディアン',
+    text: '他のクリーチャーがバトルゾーンに出た時、カードを1枚引いてもよい。',
+    keywords: { drawOnAnyCreatureEtb: true },
+  },
+  angelSong: {
+    id: 'angelSong', name: 'エンジェル・ソング', civ: 'light', type: 'spell', rarity: 'UC', set: 'DM-04',
+    cost: 3,
+    text: 'バトルゾーンにある、光以外のクリーチャーをすべてタップする。',
+    spell: massTapExceptCivAbility('light'),
+  },
+  kohakuSo: {
+    id: 'kohakuSo', name: '琥珀草', civ: 'light', type: 'creature', rarity: 'C', set: 'DM-04',
+    cost: 4, power: 3000, race: 'スターライト・ツリー',
+    text: 'S・トリガー。',
+    keywords: { shieldTrigger: true },
+  },
+  yogenshaColon: {
+    id: 'yogenshaColon', name: '予言者コロン', civ: 'light', type: 'creature', rarity: 'C', set: 'DM-04',
+    cost: 4, power: 1000, race: 'ライトブリンガー',
+    text: 'S・トリガー。このクリーチャーをバトルゾーンに出した時、バトルゾーンにある相手のクリーチャーを1体選び、タップしてもよい。',
+    keywords: { shieldTrigger: true },
+    onPlay: tapEnemy(0, 1),
+  },
+  shinsokuNoShugoshaGranLies: {
+    id: 'shinsokuNoShugoshaGranLies', name: '神速の守護者グラン・リエス', civ: 'light', type: 'creature', rarity: 'C', set: 'DM-04',
+    cost: 3, power: 2000, race: 'ガーディアン',
+    text: 'このクリーチャーは、闇のクリーチャーに攻撃またはブロックされない。',
+    keywords: { evadeCiv: 'dark' },
+  },
+  chinatsuNoShitoSalies: {
+    id: 'chinatsuNoShitoSalies', name: '鎮圧の使徒サリエス', civ: 'light', type: 'creature', rarity: 'C', set: 'DM-04',
+    cost: 2, power: 3000, race: 'イニシエート',
+    text: 'ブロッカー。このクリーチャーは、相手プレイヤーを攻撃できない。',
+    keywords: { blocker: true, cannotAttackPlayer: true },
+  },
+  lightDefense: {
+    id: 'lightDefense', name: 'ライト・ディフェンス', civ: 'light', type: 'spell', rarity: 'C', set: 'DM-04',
+    cost: 1,
+    text: '自分のターンの終わりに、バトルゾーンにある自分のクリーチャーをすべてアンタップする。',
+    spell: {
+      target: null,
+      resolve(engine, side) {
+        engine.turnFlags[side] = engine.turnFlags[side] || {};
+        engine.turnFlags[side].untapAllAtEndOfTurn = true;
+      },
+    },
+  },
+
+  // ===================== 第4弾(DM-04) 闇文明 (15) =====================
+  akumashinBaroms: {
+    id: 'akumashinBaroms', name: '悪魔神バロム', civ: 'dark', type: 'creature', rarity: 'SR', set: 'DM-04',
+    cost: 8, power: 12000, race: 'デーモン・コマンド',
+    text: '進化：自分のデーモン・コマンド・クリーチャー1体の上に置く。W・ブレイカー。このクリーチャーが出た時、闇ではないクリーチャーをすべて破壊する。',
+    keywords: { doubleBreaker: true },
+    onPlay: destroyAllExceptCivAbility('dark'),
+    evolution: { requirementText: '進化：自分のデーモン・コマンド・クリーチャー1体の上に置く。', fromRaces: ['デーモン・コマンド'] },
+  },
+  kyokotsuNoJashoQuakes: {
+    id: 'kyokotsuNoJashoQuakes', name: '凶骨の邪将クエイクス', civ: 'dark', type: 'creature', rarity: 'VR', set: 'DM-04',
+    cost: 7, power: 6000, race: 'デーモン・コマンド',
+    text: 'W・ブレイカー。このクリーチャーをバトルゾーンに出した時、バトルゾーンにある自分の他の闇のクリーチャー1体につき相手の手札を1枚見ないで選び、捨てさせる。',
+    keywords: { doubleBreaker: true },
+    onPlay: discardOpponentPerOtherOwnCivAbility('dark'),
+  },
+  jahiGregoria: {
+    id: 'jahiGregoria', name: '邪妃グレゴリア', civ: 'dark', type: 'creature', rarity: 'R', set: 'DM-04',
+    cost: 6, power: 5000, race: 'ダークロード',
+    text: 'このクリーチャーがバトルゾーンにある間、バトルゾーンにあるデーモン・コマンドすべてのパワーは+2000され、「ブロッカー」を得る。',
+    keywords: { symmetricAura: { matchRace: 'デーモン・コマンド', powerBonus: 2000, grantsBlocker: true } },
+  },
+  koharaiNoKyooGenocide: {
+    id: 'koharaiNoKyooGenocide', name: '荒廃の巨王ジェノサイド', civ: 'dark', type: 'creature', rarity: 'R', set: 'DM-04',
+    cost: 5, power: 9000, race: 'デーモン・コマンド',
+    text: 'このクリーチャーは、タップされていない光のクリーチャーを攻撃できる。このクリーチャーは、相手プレイヤーを攻撃できない。',
+    keywords: { canAttackUntappedOfCiv: 'light', cannotAttackPlayer: true },
+  },
+  ikenieNoKusari: {
+    id: 'ikenieNoKusari', name: 'いけにえの鎖', civ: 'dark', type: 'spell', rarity: 'R', set: 'DM-04',
+    cost: 8,
+    text: 'バトルゾーンにある相手のクリーチャーを2体まで選び、持ち主の墓地に置く。バトルゾーンに自分のクリーチャーが1体でもあれば、その中から1体選び、自分の墓地に置く。',
+    spell: destroyEnemyUpToTwoWithSelfSacrifice(),
+  },
+  itsuwariNoKageHellSmoke: {
+    id: 'itsuwariNoKageHellSmoke', name: '偽りの影ヘル・スモーク', civ: 'dark', type: 'creature', rarity: 'UC', set: 'DM-04',
+    cost: 6, power: 5000, race: 'ゴースト',
+    text: 'このクリーチャーがバトルゾーンにある間、光のクリーチャーを召喚するコストと光の呪文を唱えるコストは、それぞれ+2される。',
+    keywords: { taxCiv: { civ: 'light', amount: 2 } },
+  },
+  kuzuOtoko: {
+    id: 'kuzuOtoko', name: '屑男', civ: 'dark', type: 'creature', rarity: 'UC', set: 'DM-04',
+    cost: 5, power: 2000, race: 'ヘドリアン',
+    text: '他のクリーチャーが破壊された時、カードを1枚引いてもよい。',
+    keywords: { drawOnAnyCreatureDestroyed: true },
+  },
+  kishaOtoko: {
+    id: 'kishaOtoko', name: '汽車男', civ: 'dark', type: 'creature', rarity: 'UC', set: 'DM-04',
+    cost: 4, power: 1000, race: 'ヘドリアン',
+    text: 'S・トリガー。このクリーチャーが出た時、相手の手札を1枚見ないで選び、捨てさせる。',
+    keywords: { shieldTrigger: true },
+    onPlay: randomDiscardOpponent(),
+  },
+  gigaVolva: {
+    id: 'gigaVolva', name: 'ギガボルバ', civ: 'dark', type: 'creature', rarity: 'UC', set: 'DM-04',
+    cost: 4, power: 3000, race: 'キマイラ',
+    text: 'このクリーチャーがバトルゾーンにある間、誰も光のカードの「S・トリガー」を使えない。',
+    keywords: { lockShieldTriggerCiv: 'light' },
+  },
+  soulEater: {
+    id: 'soulEater', name: 'ソウル・イーター', civ: 'dark', type: 'spell', rarity: 'UC', set: 'DM-04',
+    cost: 4,
+    text: 'バトルゾーンにある相手の光のクリーチャー1体につき、相手は自分自身の手札から1枚選んで持ち主の墓地に置く。相手の手札がそれ以下の場合は、相手は自分自身の手札をすべて持ち主の墓地に置く。',
+    spell: forceDiscardPerOpponentCivAbility('light'),
+  },
+  bosyokuchuGregoriaWorm: {
+    id: 'bosyokuchuGregoriaWorm', name: '暴食虫グレゴリア・ワーム', civ: 'dark', type: 'creature', rarity: 'C', set: 'DM-04',
+    cost: 4, power: 3000, race: 'パラサイトワーム',
+    text: 'S・トリガー。',
+    keywords: { shieldTrigger: true },
+  },
+  noroiNoKageShadowMoon: {
+    id: 'noroiNoKageShadowMoon', name: '呪いの影シャドウ・ムーン', civ: 'dark', type: 'creature', rarity: 'C', set: 'DM-04',
+    cost: 4, power: 3000, race: 'ゴースト',
+    text: '他の闇のクリーチャーすべてのパワーを+2000する。',
+    keywords: { symmetricAura: { matchCiv: 'dark', powerBonus: 2000 } },
+  },
+  yamiOAbakuMonoSkeletonThief: {
+    id: 'yamiOAbakuMonoSkeletonThief', name: '闇をあばく者スケルトン・シーフ', civ: 'dark', type: 'creature', rarity: 'C', set: 'DM-04',
+    cost: 4, power: 2000, race: 'リビング・デッド',
+    text: 'このクリーチャーがバトルゾーンに出たとき、自分の墓地からリビング・デッドを1体選び、自分の手札に戻してもよい。',
+    onPlay: graveyardCardToHand(0, 1, isRace('リビング・デッド')),
+  },
+  purplePierce: {
+    id: 'purplePierce', name: 'パープル・ピアス', civ: 'dark', type: 'creature', rarity: 'C', set: 'DM-04',
+    cost: 3, power: 2000, race: 'ブレインジャッカー',
+    text: 'このクリーチャーは、光のクリーチャーに攻撃またはブロックされない。',
+    keywords: { evadeCiv: 'light' },
+  },
+  akumaNoKeiyaku: {
+    id: 'akumaNoKeiyaku', name: '悪魔の契約', civ: 'dark', type: 'spell', rarity: 'C', set: 'DM-04',
+    cost: 2,
+    text: '好きな枚数のカードを、自分のマナゾーンから墓地に置く。その後、同じ枚数のカードを引く。',
+    spell: manaToGraveyardThenDraw(),
   },
 };
 

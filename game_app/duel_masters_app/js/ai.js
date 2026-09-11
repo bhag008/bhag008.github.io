@@ -72,7 +72,7 @@ function chooseTargetsForCpu(engine, side, spec) {
   const candidates = engine.getTargetCandidates(side, spec);
   if (!candidates || candidates.length === 0) return [];
   const pool = sortCandidates(engine, side, spec, candidates);
-  const max = spec.max ?? 1;
+  const max = typeof spec.max === 'function' ? spec.max(engine, side) : (spec.max ?? 1);
   return pool.slice(0, Math.min(max, pool.length));
 }
 

@@ -99,7 +99,7 @@ function labelForCandidate(side, kind, uid) {
 // spec: {kind, min, max, filter} に従い、min〜max件選ばせてから onComplete(uids) を呼ぶ
 function promptTargetSelection(side, spec, onComplete) {
   const min = spec.min ?? 0;
-  const max = spec.max ?? 1;
+  const max = typeof spec.max === 'function' ? spec.max(engine, side) : (spec.max ?? 1);
   const chosen = [];
   function step() {
     const remaining = (engine.getTargetCandidates(side, spec) || []).filter((uid) => !chosen.includes(uid));
@@ -240,7 +240,7 @@ function renderCivTabs() {
 function renderSetTabs() {
   const tabs = $('setTabs');
   tabs.innerHTML = '';
-  const options = [['all', 'すべて'], ['DM-01', '第1弾'], ['DM-02', '第2弾'], ['DM-03', '第3弾']];
+  const options = [['all', 'すべて'], ['DM-01', '第1弾'], ['DM-02', '第2弾'], ['DM-03', '第3弾'], ['DM-04', '第4弾']];
   for (const [value, label] of options) {
     const b = document.createElement('button');
     b.className = 'btn btn-small set-tab' + (editSetFilter === value ? ' active' : '');
@@ -267,7 +267,8 @@ function cardMiniCard(def, count) {
   const div = document.createElement('div');
   div.className = 'mini-card civ-' + def.civ;
   const kw = keywordBadges(def);
-  const setLabel = cardSet(def) === 'DM-03' ? '第3弾' : cardSet(def) === 'DM-02' ? '第2弾' : '第1弾';
+  const setLabelMap = { 'DM-04': '第4弾', 'DM-03': '第3弾', 'DM-02': '第2弾' };
+  const setLabel = setLabelMap[cardSet(def)] || '第1弾';
   div.innerHTML = `
     <div class="mini-card-top">
       <span class="mini-cost">${def.cost}</span>
