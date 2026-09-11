@@ -51,6 +51,12 @@ function sortCandidates(engine, side, spec, candidates) {
       const ob = engine.players[engine.opponent(side)].mana.find((x) => x.uid === b);
       return getCard(ob.cardId).cost - getCard(oa.cardId).cost;
     });
+  } else if (spec.kind === 'enemyHandCard') {
+    pool.sort((a, b) => {
+      const oa = engine.players[engine.opponent(side)].hand.find((x) => x.uid === a);
+      const ob = engine.players[engine.opponent(side)].hand.find((x) => x.uid === b);
+      return getCard(ob.cardId).cost - getCard(oa.cardId).cost;
+    });
   } else if (spec.kind === 'ownManaCard') {
     pool.sort((a, b) => {
       const oa = engine.players[side].mana.find((x) => x.uid === a);

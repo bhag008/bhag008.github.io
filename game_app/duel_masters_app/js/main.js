@@ -87,6 +87,7 @@ function labelForCandidate(side, kind, uid) {
   else if (kind === 'anyCreature') inst = engine.players.player.battle.find((c) => c.uid === uid) || engine.players.cpu.battle.find((c) => c.uid === uid);
   else if (kind === 'ownGraveyardCreature' || kind === 'ownGraveyardCard') inst = engine.players[side].graveyard.find((c) => c.uid === uid);
   else if (kind === 'ownHandCard') inst = engine.players[side].hand.find((c) => c.uid === uid);
+  else if (kind === 'enemyHandCard') inst = engine.players[opp].hand.find((c) => c.uid === uid);
   else if (kind === 'deckTutor') inst = engine.players[side].deck.find((c) => c.uid === uid);
   else if (kind === 'enemyManaCard') inst = engine.players[opp].mana.find((c) => c.uid === uid);
   else if (kind === 'ownManaCard') inst = engine.players[side].mana.find((c) => c.uid === uid);
@@ -240,7 +241,7 @@ function renderCivTabs() {
 function renderSetTabs() {
   const tabs = $('setTabs');
   tabs.innerHTML = '';
-  const options = [['all', 'すべて'], ['DM-01', '第1弾'], ['DM-02', '第2弾'], ['DM-03', '第3弾'], ['DM-04', '第4弾']];
+  const options = [['all', 'すべて'], ['DM-01', '第1弾'], ['DM-02', '第2弾'], ['DM-03', '第3弾'], ['DM-04', '第4弾'], ['DM-05', '第5弾']];
   for (const [value, label] of options) {
     const b = document.createElement('button');
     b.className = 'btn btn-small set-tab' + (editSetFilter === value ? ' active' : '');
@@ -257,9 +258,12 @@ function countInDeck(cardId) {
 function keywordBadges(def) {
   const kw = [];
   if (isBlocker(def)) kw.push('B');
-  if (isDoubleBreaker(def)) kw.push('W');
+  if (def.keywords?.tripleBreaker) kw.push('T');
+  else if (isDoubleBreaker(def)) kw.push('W');
   if (hasShieldTrigger(def)) kw.push('S');
   if (def.keywords?.slayer) kw.push('SL');
+  if (def.keywords?.speedAttacker) kw.push('SA');
+  if ((def.race || '').includes('サバイバー')) kw.push('SV');
   return kw;
 }
 
@@ -267,7 +271,7 @@ function cardMiniCard(def, count) {
   const div = document.createElement('div');
   div.className = 'mini-card civ-' + def.civ;
   const kw = keywordBadges(def);
-  const setLabelMap = { 'DM-04': '第4弾', 'DM-03': '第3弾', 'DM-02': '第2弾' };
+  const setLabelMap = { 'DM-05': '第5弾', 'DM-04': '第4弾', 'DM-03': '第3弾', 'DM-02': '第2弾' };
   const setLabel = setLabelMap[cardSet(def)] || '第1弾';
   div.innerHTML = `
     <div class="mini-card-top">
