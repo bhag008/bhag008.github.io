@@ -356,6 +356,8 @@ function renderCpuSelect() {
   if (!selectedPlayerDeckId || !validDecks.some((d) => d.id === selectedPlayerDeckId)) {
     selectedPlayerDeckId = validDecks[0]?.id ?? null;
   }
+  const cpuDeckStillValid = CPU_DECKS.some((d) => d.id === selectedCpuDeckId) || validDecks.some((d) => d.id === selectedCpuDeckId);
+  if (!cpuDeckStillValid) selectedCpuDeckId = CPU_DECKS[0].id;
   const pdWrap = $('playerDeckSelect');
   pdWrap.innerHTML = '<h3>使用するデッキ</h3>';
   for (const d of validDecks) {
@@ -375,13 +377,28 @@ function renderCpuSelect() {
     b.onclick = () => { selectedCpuDeckId = d.id; renderCpuSelect(); };
     cdWrap.appendChild(b);
   }
+  if (validDecks.length > 0) {
+    const sep = document.createElement('p');
+    sep.className = 'hint select-wrap-sep';
+    sep.textContent = 'あなたが編成したデッキ';
+    cdWrap.appendChild(sep);
+    for (const d of validDecks) {
+      const b = document.createElement('button');
+      b.className = 'btn deck-select-btn' + (d.id === selectedCpuDeckId ? ' active' : '');
+      b.innerHTML = `<strong>${escapeHtml(d.name)}</strong><span class="hint">${d.cardIds.length}枚・自分で編成したデッキ</span>`;
+      b.onclick = () => { selectedCpuDeckId = d.id; renderCpuSelect(); };
+      cdWrap.appendChild(b);
+    }
+  }
   $('btnStartDuel').disabled = !selectedPlayerDeckId;
 }
 $('btnBackFromCpuSelect').onclick = () => { renderTitle(); showScreen('screen-title'); };
 $('btnStartDuel').onclick = () => {
   const playerDeck = decksData.decks.find((d) => d.id === selectedPlayerDeckId);
-  const cpuDeck = getCpuDeck(selectedCpuDeckId);
-  startDuel(playerDeck.cardIds, cpuDeck.cardIds);
+  const cpuPreset = getCpuDeck(selectedCpuDeckId);
+  const cpuCardIds = cpuPreset ? cpuPreset.cardIds : decksData.decks.find((d) => d.id === selectedCpuDeckId)?.cardIds;
+  if (!cpuCardIds) return;
+  startDuel(playerDeck.cardIds, cpuCardIds);
 };
 
 // ---------------- 対戦 ----------------
