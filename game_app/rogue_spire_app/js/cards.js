@@ -169,7 +169,7 @@ const CARD_DB = {
   },
   spikedArmor: {
     name: '棘の鎧', type: 'power', cost: 1, rarity: 'rare', target: 'self',
-    values: { thorns: 3 }, upgradedValues: { thorns: 5 },
+    values: { thorns: 4 }, upgradedValues: { thorns: 6 },
     desc: v => `このバトル中、攻撃を受けるたびに${v.thorns}ダメージを反射する。`,
     exhaustSelf: true,
     effects: v => [{ type: 'thornsBuff', amount: v.thorns }],
