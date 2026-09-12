@@ -40,7 +40,7 @@ const CARD_DB = {
   },
   cleave: {
     name: '薙ぎ払い', type: 'attack', cost: 1, rarity: 'common', target: 'all',
-    values: { dmg: 7 }, upgradedValues: { dmg: 10 },
+    values: { dmg: 8 }, upgradedValues: { dmg: 11 },
     desc: v => `敵全体に${v.dmg}ダメージ。`,
     effects: v => [{ type: 'damage', amount: v.dmg, target: 'all' }],
   },
@@ -94,12 +94,6 @@ const CARD_DB = {
     desc: v => `敵に${v.weak}ターンの脱力(与ダメ-25%)を与える。`,
     effects: v => [{ type: 'debuff', stat: 'weak', amount: v.weak, target: 'enemy' }],
   },
-  guardBreak: {
-    name: '守りを崩す', type: 'skill', cost: 1, rarity: 'common', target: 'all',
-    values: { frail: 2 }, upgradedValues: { frail: 3 },
-    desc: v => `敵全体に${v.frail}ターンの防御低下(ブロック-50%)を与える。`,
-    effects: v => [{ type: 'debuff', stat: 'frail', amount: v.frail, target: 'all' }],
-  },
   fieldMedic: {
     name: '応急手当', type: 'skill', cost: 1, rarity: 'common', target: 'self',
     values: { heal: 5 }, upgradedValues: { heal: 8 },
@@ -150,6 +144,12 @@ const CARD_DB = {
     values: { poison: 4 }, upgradedValues: { poison: 6 },
     desc: v => `敵全体に毒${v.poison}を付与。`,
     effects: v => [{ type: 'debuff', stat: 'poison', amount: v.poison, target: 'all' }],
+  },
+  divineWard: {
+    name: '聖なる守り', type: 'skill', cost: 1, rarity: 'uncommon', target: 'self',
+    values: { shield: 1 }, upgradedValues: { shield: 2 },
+    desc: v => `次に受ける状態異常を${v.shield}回無効化する。`,
+    effects: v => [{ type: 'debuffShield', amount: v.shield }],
   },
 
   // --- パワー(恒久バフ、使用後は消滅) ---

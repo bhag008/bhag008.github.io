@@ -39,6 +39,7 @@ export class CombatEngine {
       drawBonus: hasSwiftFeet ? 1 : 0,
       firstTurnDrawBonus: hasOpeningGambit ? 2 : 0,
       firstTurnEnergyBonus: hasOpeningVigor ? 1 : 0,
+      debuffShield: 0,
     };
     this.enemies = enemyIds.map(makeEnemyInstance);
     this.drawPile = shuffle(run.deck);
@@ -140,6 +141,10 @@ export class CombatEngine {
   }
 
   applyDebuff(target, stat, amount) {
+    if (target === this.player && this.player.debuffShield > 0) {
+      this.player.debuffShield--;
+      return;
+    }
     target.statuses[stat] = (target.statuses[stat] || 0) + amount;
   }
 
@@ -227,6 +232,9 @@ export class CombatEngine {
         break;
       case 'regenBuff':
         this.player.regen += effect.amount;
+        break;
+      case 'debuffShield':
+        this.player.debuffShield += effect.amount;
         break;
       default:
         break;

@@ -349,6 +349,7 @@ function renderCombat() {
   if (p.dexterity) buffs.push(`敏捷+${p.dexterity}`);
   if (p.thorns) buffs.push(`棘${p.thorns}`);
   if (p.regen) buffs.push(`再生${p.regen}`);
+  if (p.debuffShield) buffs.push(`加護${p.debuffShield}`);
   el('combatBuffRow').innerHTML = buffs.map(b => `<span class="buff-chip">${b}</span>`).join('') + statusBadges(p.statuses);
 
   el('energyText').textContent = `${p.energy}/${p.energyMax}`;
