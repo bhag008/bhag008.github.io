@@ -108,17 +108,16 @@ const NEOW_OPTIONS = [
   },
   {
     label: '初期カードを1枚強化',
-    desc: 'デッキ内のランダムなカードを1枚強化する。',
-    apply: r => {
-      const candidates = r.deck.filter(c => !c.upgraded);
-      const pool = candidates.length > 0 ? candidates : r.deck;
-      pool[Math.floor(Math.random() * pool.length)].upgraded = true;
-    },
+    desc: 'デッキから1枚選んで強化する。',
+    pickCard: true,
   },
 ];
 
 function showNeowScreen() {
   showScreen('screen-neow');
+  el('neowChoices').classList.remove('hidden');
+  el('neowUpgradeList').classList.add('hidden');
+  el('neowUpgradeList').innerHTML = '';
   el('neowChoices').innerHTML = NEOW_OPTIONS.map((opt, i) => `
     <div class="relic-reward-card neow-choice" data-idx="${i}">
       <div class="r-name">${opt.label}</div>
@@ -127,7 +126,27 @@ function showNeowScreen() {
   `).join('');
   el('neowChoices').querySelectorAll('.neow-choice').forEach(elm => {
     elm.addEventListener('click', () => {
-      NEOW_OPTIONS[Number(elm.dataset.idx)].apply(run);
+      const opt = NEOW_OPTIONS[Number(elm.dataset.idx)];
+      if (opt.pickCard) {
+        showNeowUpgradePick();
+        return;
+      }
+      opt.apply(run);
+      saveRun(run);
+      goToMap();
+    });
+  });
+}
+
+function showNeowUpgradePick() {
+  el('neowChoices').classList.add('hidden');
+  const list = el('neowUpgradeList');
+  list.classList.remove('hidden');
+  list.innerHTML = run.deck.map(inst => cardHtml(inst, 'deck-card')).join('');
+  list.querySelectorAll('.card').forEach(cardEl => {
+    cardEl.addEventListener('click', () => {
+      const inst = run.deck.find(c => c.uid === Number(cardEl.dataset.uid));
+      inst.upgraded = true;
       saveRun(run);
       goToMap();
     });
