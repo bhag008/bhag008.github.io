@@ -178,7 +178,7 @@ function renderMap() {
 function enterNode(node) {
   pendingNode = node;
   run.floorReached = Math.max(run.floorReached, absoluteFloor(node));
-  if (node.type === 'battle') startCombatForNode(rollNormalEncounter(run.act));
+  if (node.type === 'battle') startCombatForNode(rollNormalEncounter(run.act, node.floor === 0));
   else if (node.type === 'elite') startCombatForNode(rollEliteEncounter(run.act));
   else if (node.type === 'boss') startCombatForNode(rollBossEncounter(run.act));
   else if (node.type === 'rest') showRestScreen();

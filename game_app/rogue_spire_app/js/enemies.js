@@ -6,7 +6,7 @@
 const ENEMY_DB = {
   // --- 第1層 ---
   ashWolf: {
-    name: '灰の狼', maxHp: [16, 20], isElite: false,
+    name: '灰の狼', maxHp: [19, 23], isElite: false,
     pattern: [
       { kind: 'attack', value: 7 },
       { kind: 'attack', value: 7 },
@@ -29,7 +29,7 @@ const ENEMY_DB = {
     ],
   },
   shadowThief: {
-    name: '影の盗賊', maxHp: [12, 15], isElite: false,
+    name: '影の盗賊', maxHp: [12, 15], isElite: false, alwaysPaired: true,
     pattern: [
       { kind: 'attackDebuff', value: 4, debuffStat: 'weak', debuffAmount: 1 },
       { kind: 'attack', value: 5 },
@@ -275,13 +275,22 @@ export const ACT_POOLS = {
   },
 };
 
-export function rollNormalEncounter(act = 1) {
+// 単体では弱すぎる敵(alwaysPaired)は「1枠」として抽選されても2体セットで出す
+function pickNormalSlot(pool) {
+  const id = pick(pool);
+  return getEnemyDef(id).alwaysPaired ? [id, id] : [id];
+}
+
+export function rollNormalEncounter(act = 1, forceSingle = false) {
   const pool = ACT_POOLS[act] || ACT_POOLS[1];
+  if (forceSingle) {
+    return pickNormalSlot(pool.normal);
+  }
   const roll = Math.random();
   if (roll < 0.5) {
-    return [pick(pool.normal)];
+    return pickNormalSlot(pool.normal);
   } else if (roll < 0.8) {
-    return [pick(pool.normal), pick(pool.normal)];
+    return [...pickNormalSlot(pool.normal), ...pickNormalSlot(pool.normal)];
   }
   return [pool.pairId, pool.pairId];
 }
