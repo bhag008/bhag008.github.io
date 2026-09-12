@@ -758,8 +758,9 @@ function enemyInfoCardHtml(id, category) {
   const patternHtml = def.pattern.map(step => `<span class="e-pattern-step">${patternStepText(step)}</span>`).join('');
   const thornsText = def.thorns ? ` / 棘${def.thorns}` : '';
   const pairTag = def.alwaysPaired ? '<span class="e-pair-tag">ペア</span>' : '';
+  const soloTag = def.soloEncounter ? '<span class="e-pair-tag">単体</span>' : '';
   return `<div class="${classes.join(' ')}">
-    <div class="e-name">${def.name}${pairTag}</div>
+    <div class="e-name">${def.name}${pairTag}${soloTag}</div>
     <div class="e-hp"><span class="hp-icon">♥</span> ${def.maxHp[0]}〜${def.maxHp[1]}${thornsText}</div>
     <div class="e-pattern">${patternHtml}</div>
   </div>`;

@@ -22,7 +22,7 @@ const ENEMY_DB = {
     ],
   },
   thornGolem: {
-    name: '棘のゴーレム', maxHp: [30, 34], isElite: false, thorns: 3,
+    name: '棘のゴーレム', maxHp: [36, 40], isElite: false, thorns: 3, soloEncounter: true,
     pattern: [
       { kind: 'defend', value: 9 },
       { kind: 'attack', value: 9 },
@@ -277,21 +277,28 @@ export const ACT_POOLS = {
 };
 
 // 単体では弱すぎる敵(alwaysPaired)は「1枠」として抽選されても2体セットで出す
-function pickNormalSlot(pool) {
-  const id = pick(pool);
+// 単体で複数枠を占有する強敵(soloEncounter)は、単体枠(1枠のみの抽選)では選ばれない
+function pickNormalSlot(pool, allowSoloEncounter) {
+  const candidates = allowSoloEncounter ? pool : pool.filter(id => !getEnemyDef(id).soloEncounter);
+  const id = pick(candidates.length ? candidates : pool);
   return getEnemyDef(id).alwaysPaired ? [id, id] : [id];
 }
 
 export function rollNormalEncounter(act = 1, forceSingle = false) {
   const pool = ACT_POOLS[act] || ACT_POOLS[1];
   if (forceSingle) {
-    return pickNormalSlot(pool.normal);
+    return pickNormalSlot(pool.normal, false);
   }
   const roll = Math.random();
   if (roll < 0.5) {
-    return pickNormalSlot(pool.normal);
+    return pickNormalSlot(pool.normal, false);
   } else if (roll < 0.8) {
-    return [...pickNormalSlot(pool.normal), ...pickNormalSlot(pool.normal)];
+    // 単体で複数枠を占有する敵(soloEncounter)が出たら、その敵だけの遭遇にする
+    const first = pickNormalSlot(pool.normal, true);
+    if (first.length === 1 && getEnemyDef(first[0]).soloEncounter) return first;
+    const second = pickNormalSlot(pool.normal, true);
+    if (second.length === 1 && getEnemyDef(second[0]).soloEncounter) return second;
+    return [...first, ...second];
   }
   return [pool.pairId, pool.pairId];
 }
