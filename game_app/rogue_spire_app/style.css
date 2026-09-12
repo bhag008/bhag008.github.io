@@ -187,6 +187,8 @@ button { font-family: inherit; }
 .relic-list-grid .relic-reward-card { margin-bottom: 0; position: relative; }
 .relic-reward-card.owned { border-color: var(--accent-2); }
 .r-owned-badge { margin-top: 10px; display: inline-block; font-size: 10.5px; font-weight: 700; color: #1a1508; background: var(--accent-2); border-radius: 8px; padding: 2px 8px; }
+.neow-choice { cursor: pointer; transition: transform 0.1s; }
+.neow-choice:active { transform: scale(0.97); }
 
 .card-list-subgroup { color: var(--text-dim); font-size: 11.5px; margin: 10px 0 8px; text-align: center; letter-spacing: 0.05em; }
 .enemy-list-grid { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 6px; }

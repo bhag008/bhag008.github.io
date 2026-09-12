@@ -1,6 +1,7 @@
 import {
   STARTER_DECK, makeCardInstance, cardDisplayName, cardDescription, cardCost,
-  cardType, cardTarget, cardRarity, cardPrice, rollCardRewards, allCardIds, getCardDef,
+  cardType, cardTarget, cardRarity, cardPrice, rollCardRewards, rollRareCardRewards,
+  randomCardIdByRarity, allCardIds, getCardDef,
   RARITY_ORDER, RARITY_LABELS,
 } from './cards.js';
 import {
@@ -17,7 +18,7 @@ import { EVENT_DB, rollEvent } from './events.js';
 const el = id => document.getElementById(id);
 const screens = [
   'screen-title', 'screen-map', 'screen-combat', 'screen-reward', 'screen-relic', 'screen-rest',
-  'screen-gameover', 'screen-shop', 'screen-event', 'screen-actclear',
+  'screen-gameover', 'screen-shop', 'screen-event', 'screen-actclear', 'screen-neow',
 ];
 const TOTAL_ACTS = 3;
 
@@ -83,17 +84,61 @@ function absoluteFloor(node) {
 }
 
 function rollGoldReward(nodeType) {
-  const scale = (1 + (run.act - 1) * 0.4) * (run.relics.includes('merchantsRing') ? 1.2 : 1);
+  const scale = (1 + (run.act - 1) * 0.4) * 1.2 * (run.relics.includes('merchantsRing') ? 1.2 : 1);
   if (nodeType === 'boss') return Math.round((75 + Math.floor(Math.random() * 26)) * scale);
   if (nodeType === 'elite') return Math.round((25 + Math.floor(Math.random() * 16)) * scale);
   return Math.round((10 + Math.floor(Math.random() * 11)) * scale);
+}
+
+const NEOW_OPTIONS = [
+  {
+    label: '最大HP+10',
+    desc: '最大HPが10増え、HPが全回復する。',
+    apply: r => { r.maxHp += 10; r.hp = r.maxHp; },
+  },
+  {
+    label: 'ゴールド+100',
+    desc: '100ゴールドを手に入れる。',
+    apply: r => { r.gold += 100; },
+  },
+  {
+    label: 'レアカードを1枚獲得',
+    desc: 'ランダムなレアカードをデッキに加える。',
+    apply: r => { r.deck.push(makeCardInstance(randomCardIdByRarity('rare'), false)); },
+  },
+  {
+    label: '初期カードを1枚強化',
+    desc: 'デッキ内のランダムなカードを1枚強化する。',
+    apply: r => {
+      const candidates = r.deck.filter(c => !c.upgraded);
+      const pool = candidates.length > 0 ? candidates : r.deck;
+      pool[Math.floor(Math.random() * pool.length)].upgraded = true;
+    },
+  },
+];
+
+function showNeowScreen() {
+  showScreen('screen-neow');
+  el('neowChoices').innerHTML = NEOW_OPTIONS.map((opt, i) => `
+    <div class="relic-reward-card neow-choice" data-idx="${i}">
+      <div class="r-name">${opt.label}</div>
+      <div class="r-desc">${opt.desc}</div>
+    </div>
+  `).join('');
+  el('neowChoices').querySelectorAll('.neow-choice').forEach(elm => {
+    elm.addEventListener('click', () => {
+      NEOW_OPTIONS[Number(elm.dataset.idx)].apply(run);
+      saveRun(run);
+      goToMap();
+    });
+  });
 }
 
 el('btnNewRun').addEventListener('click', () => {
   if (hasSavedRun() && !confirm('現在のランを破棄して新しく始めますか?')) return;
   run = createNewRun();
   saveRun(run);
-  goToMap();
+  showNeowScreen();
 });
 
 el('btnContinue').addEventListener('click', () => {
@@ -419,7 +464,7 @@ function showCardRewardScreen() {
   showScreen('screen-reward');
   el('goldGainText').textContent = lastGoldGain > 0 ? `💰 ${lastGoldGain} ゴールドを獲得した` : '';
   lastGoldGain = 0;
-  const options = rollCardRewards(3);
+  const options = pendingNode.type === 'boss' ? rollRareCardRewards(3) : rollCardRewards(3);
   el('rewardCards').innerHTML = options.map(inst => cardHtml(inst, 'reward-card')).join('');
   el('rewardCards').querySelectorAll('.card').forEach(cardEl => {
     cardEl.addEventListener('click', () => {

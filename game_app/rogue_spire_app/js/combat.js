@@ -217,9 +217,11 @@ export class CombatEngine {
       case 'heal':
         this.player.hp = Math.min(this.player.maxHp, this.player.hp + effect.amount);
         break;
-      case 'selfDamage':
-        this.dealDamageToPlayer(effect.amount, true);
+      case 'selfDamage': {
+        const amt = this.hasHardShell ? Math.max(0, effect.amount - 1) : effect.amount;
+        this.dealDamageToPlayer(amt, true);
         break;
+      }
       case 'thornsBuff':
         this.player.thorns += effect.amount;
         break;

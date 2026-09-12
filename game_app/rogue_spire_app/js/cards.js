@@ -66,7 +66,7 @@ const CARD_DB = {
   // --- コモンスキル ---
   ironSkin: {
     name: '鉄の肌', type: 'skill', cost: 1, rarity: 'common', target: 'self',
-    values: { block: 8 }, upgradedValues: { block: 11 },
+    values: { block: 9 }, upgradedValues: { block: 12 },
     desc: v => `${v.block}ブロックを得る。`,
     effects: v => [{ type: 'block', amount: v.block }],
   },
@@ -292,6 +292,21 @@ export function rollCardRewards(count, existingUpgradeableCheck) {
   while (picks.length < count && guardLoops < 200) {
     guardLoops++;
     const id = weightedPick(pool);
+    if (usedIds.has(id)) continue;
+    usedIds.add(id);
+    picks.push(makeCardInstance(id, false));
+  }
+  return picks;
+}
+
+export function rollRareCardRewards(count) {
+  const pool = allRewardEligibleIds().filter(id => CARD_DB[id].rarity === 'rare');
+  const picks = [];
+  const usedIds = new Set();
+  let guardLoops = 0;
+  while (picks.length < count && usedIds.size < pool.length && guardLoops < 200) {
+    guardLoops++;
+    const id = pool[Math.floor(Math.random() * pool.length)];
     if (usedIds.has(id)) continue;
     usedIds.add(id);
     picks.push(makeCardInstance(id, false));
