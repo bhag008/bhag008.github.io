@@ -196,6 +196,7 @@ button { font-family: inherit; }
 .enemy-info-card.is-elite { border-color: var(--power); }
 .enemy-info-card.is-boss { border-color: var(--danger); }
 .enemy-info-card .e-name { font-weight: 700; margin-bottom: 4px; color: var(--accent-2); }
+.e-pair-tag { margin-left: 6px; font-size: 9.5px; font-weight: 700; color: #1a1508; background: var(--accent-2); border-radius: 8px; padding: 2px 6px; vertical-align: middle; }
 .enemy-info-card .e-hp { font-size: 11.5px; color: var(--text-dim); margin-bottom: 8px; }
 .enemy-info-card .e-hp .hp-icon { color: var(--hp); }
 .enemy-info-card .e-pattern { font-size: 11.5px; line-height: 1.6; color: #d8d2e6; }

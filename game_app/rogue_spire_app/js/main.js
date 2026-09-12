@@ -757,8 +757,9 @@ function enemyInfoCardHtml(id, category) {
   if (category === 'boss') classes.push('is-boss');
   const patternHtml = def.pattern.map(step => `<span class="e-pattern-step">${patternStepText(step)}</span>`).join('');
   const thornsText = def.thorns ? ` / 棘${def.thorns}` : '';
+  const pairTag = def.alwaysPaired ? '<span class="e-pair-tag">ペア</span>' : '';
   return `<div class="${classes.join(' ')}">
-    <div class="e-name">${def.name}</div>
+    <div class="e-name">${def.name}${pairTag}</div>
     <div class="e-hp"><span class="hp-icon">♥</span> ${def.maxHp[0]}〜${def.maxHp[1]}${thornsText}</div>
     <div class="e-pattern">${patternHtml}</div>
   </div>`;
