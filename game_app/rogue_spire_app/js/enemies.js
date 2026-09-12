@@ -163,7 +163,7 @@ const ENEMY_DB = {
     ],
   },
   infernoWisp: {
-    name: '業火の鬼火', maxHp: [22, 26], isElite: false,
+    name: '業火の鬼火', maxHp: [22, 26], isElite: false, alwaysPaired: true,
     pattern: [
       { kind: 'poison', value: 8 },
       { kind: 'attack', value: 12 },
