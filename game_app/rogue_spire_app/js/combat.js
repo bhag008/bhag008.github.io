@@ -292,6 +292,9 @@ export class CombatEngine {
       case 'buff':
         enemy[intent.stat] = (enemy[intent.stat] || 0) + intent.value;
         break;
+      case 'thorns':
+        enemy.thorns = (enemy.thorns || 0) + intent.value;
+        break;
       case 'poison':
         this.applyDebuff(this.player, 'poison', intent.value);
         break;

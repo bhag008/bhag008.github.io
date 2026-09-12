@@ -284,6 +284,8 @@ function intentDisplay(enemy) {
       return `🛡️<span class="intent-val">${intent.value}</span>`;
     case 'buff':
       return `💪<span class="intent-val">+${intent.value}</span>`;
+    case 'thorns':
+      return `🦔<span class="intent-val">+${intent.value}</span>`;
     case 'poison':
       return `☠️<span class="intent-val">${intent.value}</span>`;
     case 'weaken':
@@ -720,6 +722,8 @@ function patternStepText(step) {
       return `防御 ${step.value}`;
     case 'buff':
       return `${step.stat === 'strength' ? '力' : step.stat}+${step.value}`;
+    case 'thorns':
+      return `棘+${step.value}`;
     case 'poison':
       return `毒${step.value}付与`;
     default:

@@ -148,8 +148,9 @@ const ENEMY_DB = {
 
   // --- 第3層 ---
   obsidianGolem: {
-    name: '黒曜石の巨像', maxHp: [45, 50], isElite: false, thorns: 5,
+    name: '黒曜石の巨像', maxHp: [45, 50], isElite: false,
     pattern: [
+      { kind: 'thorns', value: 5 },
       { kind: 'defend', value: 20 },
       { kind: 'attack', value: 24 },
     ],
