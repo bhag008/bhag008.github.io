@@ -132,6 +132,7 @@ export class CombatEngine {
     }
     enemy.hp = Math.max(0, enemy.hp - remaining);
     this.checkResult();
+    return remaining;
   }
 
   gainPlayerBlock(amount) {
@@ -200,6 +201,27 @@ export class CombatEngine {
         const dmg = this.computeIncomingDamage(base, this.player, targetEnemy);
         this.dealDamageToEnemy(targetEnemy, dmg);
         if (targetEnemy.thorns > 0) this.dealDamageToPlayer(targetEnemy.thorns, true);
+        break;
+      }
+      case 'randomDamage': {
+        const hits = effect.hits || 1;
+        for (let h = 0; h < hits; h++) {
+          const alive = this.aliveEnemies();
+          if (!alive.length) break;
+          const enemy = alive[Math.floor(Math.random() * alive.length)];
+          const dmg = this.computeIncomingDamage(effect.amount, this.player, enemy);
+          this.dealDamageToEnemy(enemy, dmg);
+          if (enemy.thorns > 0) this.dealDamageToPlayer(enemy.thorns, true);
+        }
+        break;
+      }
+      case 'lifestealDamage': {
+        if (!targetEnemy) break;
+        const dmg = this.computeIncomingDamage(effect.amount, this.player, targetEnemy);
+        const dealt = this.dealDamageToEnemy(targetEnemy, dmg);
+        if (targetEnemy.thorns > 0) this.dealDamageToPlayer(targetEnemy.thorns, true);
+        const heal = Math.floor(dealt / 2);
+        if (heal > 0) this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal);
         break;
       }
       case 'block':

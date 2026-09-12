@@ -116,15 +116,15 @@ const CARD_DB = {
   },
   barrage: {
     name: '乱れ撃ち', type: 'attack', cost: 2, rarity: 'uncommon', target: 'all',
-    values: { dmg: 16 }, upgradedValues: { dmg: 20 },
-    desc: v => `敵全体に${v.dmg}ダメージ。`,
-    effects: v => [{ type: 'damage', amount: v.dmg, target: 'all' }],
+    values: { dmg: 3, hits: 5 }, upgradedValues: { dmg: 4, hits: 5 },
+    desc: v => `ランダムな敵に${v.dmg}ダメージを${v.hits}回与える。`,
+    effects: v => [{ type: 'randomDamage', amount: v.dmg, hits: v.hits }],
   },
   drainStrike: {
     name: '吸血の刃', type: 'attack', cost: 2, rarity: 'uncommon', target: 'enemy',
-    values: { dmg: 10, heal: 4 }, upgradedValues: { dmg: 13, heal: 6 },
-    desc: v => `敵に${v.dmg}ダメージ。自身のHPを${v.heal}回復する。`,
-    effects: v => [{ type: 'damage', amount: v.dmg }, { type: 'heal', amount: v.heal }],
+    values: { dmg: 10 }, upgradedValues: { dmg: 13 },
+    desc: v => `敵に${v.dmg}ダメージ。与えたダメージの半分(端数切り捨て)のHPを回復する。`,
+    effects: v => [{ type: 'lifestealDamage', amount: v.dmg }],
   },
   fortify: {
     name: '要塞化', type: 'skill', cost: 2, rarity: 'uncommon', target: 'self',
@@ -185,13 +185,13 @@ const CARD_DB = {
   // --- レア ---
   annihilate: {
     name: '滅殺', type: 'attack', cost: 3, rarity: 'rare', target: 'enemy',
-    values: { dmg: 30 }, upgradedValues: { dmg: 38 },
+    values: { dmg: 32 }, upgradedValues: { dmg: 40 },
     desc: v => `敵に${v.dmg}ダメージ。`,
     effects: v => [{ type: 'damage', amount: v.dmg }],
   },
   meteor: {
     name: '隕石落とし', type: 'attack', cost: 3, rarity: 'rare', target: 'all',
-    values: { dmg: 28 }, upgradedValues: { dmg: 34 },
+    values: { dmg: 27 }, upgradedValues: { dmg: 33 },
     desc: v => `敵全体に${v.dmg}ダメージ。`,
     effects: v => [{ type: 'damage', amount: v.dmg, target: 'all' }],
   },
