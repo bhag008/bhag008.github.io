@@ -22,6 +22,8 @@ export class CombatEngine {
     const hasGuardianAmulet = run.relics.includes('guardianAmulet');
     const hasNimbleBoots = run.relics.includes('nimbleBoots');
     const hasBloodPact = run.relics.includes('bloodPact');
+    const hasOpeningGambit = run.relics.includes('openingGambit');
+    const hasOpeningVigor = run.relics.includes('openingVigor');
 
     this.player = {
       hp: run.hp,
@@ -35,6 +37,8 @@ export class CombatEngine {
       regen: 0,
       statuses: { weak: 0, vulnerable: 0, frail: 0, poison: 0 },
       drawBonus: hasSwiftFeet ? 1 : 0,
+      firstTurnDrawBonus: hasOpeningGambit ? 2 : 0,
+      firstTurnEnergyBonus: hasOpeningVigor ? 1 : 0,
     };
     this.enemies = enemyIds.map(makeEnemyInstance);
     this.drawPile = shuffle(run.deck);
@@ -90,10 +94,11 @@ export class CombatEngine {
         this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.player.regen);
       }
     }
-    this.player.energy = this.player.energyMax;
+    this.player.energy = this.player.energyMax + (isFirst ? this.player.firstTurnEnergyBonus : 0);
     this.discardPile.push(...this.hand);
     this.hand = [];
-    this.drawCards(5 + this.player.drawBonus);
+    const firstTurnDraw = isFirst ? this.player.firstTurnDrawBonus : 0;
+    this.drawCards(5 + this.player.drawBonus + firstTurnDraw);
     this.checkResult();
   }
 

@@ -33,7 +33,7 @@ const RELIC_ICONS = {
   vengefulThorns: '🌵', alchemicVial: '🧪', travelersCharm: '🍀',
   guardianAmulet: '🔰', nimbleBoots: '👢', merchantsRing: '💍',
   bloodPact: '🩸', luckyCoin: '🪙', whetstone: '🪨',
-  vitalCrystal: '💎', phoenixFeather: '🪶',
+  openingGambit: '⚡', openingVigor: '🔥', vitalCrystal: '💎', phoenixFeather: '🪶',
 };
 const STATUS_LABELS = { weak: '脱力', vulnerable: '弱体', frail: '防御低下', poison: '毒' };
 
@@ -440,7 +440,7 @@ function showRestScreen() {
   el('btnRestUpgrade').disabled = !canUpgrade;
 
   el('btnRestHeal').onclick = () => {
-    const bonus = run.relics.includes('travelersCharm') ? 1.1 : 1;
+    const bonus = run.relics.includes('travelersCharm') ? 1.3 : 1;
     const heal = Math.round(run.maxHp * 0.3 * bonus);
     run.hp = Math.min(run.maxHp, run.hp + heal);
     finishNode(pendingNode);
