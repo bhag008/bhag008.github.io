@@ -239,7 +239,7 @@ export function makeEnemyInstance(id) {
     maxHp: hp,
     block: 0,
     strength: 0,
-    statuses: { weak: 0, vulnerable: 0, poison: 0 },
+    statuses: { weak: 0, vulnerable: 0, frail: 0, poison: 0 },
     thorns: def.thorns || 0,
     patternIndex: 0,
     intent: null,

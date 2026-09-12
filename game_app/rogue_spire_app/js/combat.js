@@ -130,7 +130,7 @@ export class CombatEngine {
 
   gainPlayerBlock(amount) {
     let b = amount + (this.player.dexterity || 0);
-    if (this.player.statuses.frail > 0) b = Math.floor(b * 0.75);
+    if (this.player.statuses.frail > 0) b = Math.floor(b * 0.5);
     this.player.block += Math.max(0, b);
   }
 
@@ -246,7 +246,7 @@ export class CombatEngine {
       if (enemy.hp <= 0) continue;
       this.executeIntent(enemy);
       if (this.result) return;
-      for (const stat of ['weak', 'vulnerable']) {
+      for (const stat of ['weak', 'vulnerable', 'frail']) {
         if (enemy.statuses[stat] > 0) enemy.statuses[stat]--;
       }
     }
@@ -276,9 +276,12 @@ export class CombatEngine {
         this.applyDebuff(this.player, intent.debuffStat, intent.debuffAmount);
         break;
       }
-      case 'defend':
-        enemy.block += intent.value;
+      case 'defend': {
+        let block = intent.value;
+        if (enemy.statuses.frail > 0) block = Math.floor(block * 0.5);
+        enemy.block += Math.max(0, block);
         break;
+      }
       case 'buff':
         enemy[intent.stat] = (enemy[intent.stat] || 0) + intent.value;
         break;

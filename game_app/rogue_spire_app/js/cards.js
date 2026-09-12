@@ -97,7 +97,7 @@ const CARD_DB = {
   guardBreak: {
     name: '守りを崩す', type: 'skill', cost: 1, rarity: 'common', target: 'all',
     values: { frail: 2 }, upgradedValues: { frail: 3 },
-    desc: v => `敵全体に${v.frail}ターンの防御低下(ブロック-25%)を与える。`,
+    desc: v => `敵全体に${v.frail}ターンの防御低下(ブロック-50%)を与える。`,
     effects: v => [{ type: 'debuff', stat: 'frail', amount: v.frail, target: 'all' }],
   },
   fieldMedic: {
@@ -110,7 +110,7 @@ const CARD_DB = {
   // --- アンコモン ---
   doubleStrike: {
     name: '三連撃', type: 'attack', cost: 2, rarity: 'uncommon', target: 'enemy',
-    values: { dmg: 6, hits: 3 }, upgradedValues: { dmg: 7, hits: 3 },
+    values: { dmg: 5, hits: 3 }, upgradedValues: { dmg: 6, hits: 3 },
     desc: v => `敵に${v.dmg}ダメージを${v.hits}回。`,
     effects: v => [{ type: 'damage', amount: v.dmg, hits: v.hits }],
   },
@@ -122,7 +122,7 @@ const CARD_DB = {
   },
   barrage: {
     name: '乱れ撃ち', type: 'attack', cost: 2, rarity: 'uncommon', target: 'all',
-    values: { dmg: 12 }, upgradedValues: { dmg: 16 },
+    values: { dmg: 16 }, upgradedValues: { dmg: 20 },
     desc: v => `敵全体に${v.dmg}ダメージ。`,
     effects: v => [{ type: 'damage', amount: v.dmg, target: 'all' }],
   },
@@ -134,7 +134,7 @@ const CARD_DB = {
   },
   fortify: {
     name: '要塞化', type: 'skill', cost: 2, rarity: 'uncommon', target: 'self',
-    values: { block: 16 }, upgradedValues: { block: 20 },
+    values: { block: 18 }, upgradedValues: { block: 22 },
     desc: v => `${v.block}ブロックを得る。`,
     effects: v => [{ type: 'block', amount: v.block }],
   },
@@ -185,13 +185,13 @@ const CARD_DB = {
   // --- レア ---
   annihilate: {
     name: '滅殺', type: 'attack', cost: 3, rarity: 'rare', target: 'enemy',
-    values: { dmg: 28 }, upgradedValues: { dmg: 36 },
+    values: { dmg: 30 }, upgradedValues: { dmg: 38 },
     desc: v => `敵に${v.dmg}ダメージ。`,
     effects: v => [{ type: 'damage', amount: v.dmg }],
   },
   meteor: {
     name: '隕石落とし', type: 'attack', cost: 3, rarity: 'rare', target: 'all',
-    values: { dmg: 22 }, upgradedValues: { dmg: 27 },
+    values: { dmg: 28 }, upgradedValues: { dmg: 34 },
     desc: v => `敵全体に${v.dmg}ダメージ。`,
     effects: v => [{ type: 'damage', amount: v.dmg, target: 'all' }],
   },
