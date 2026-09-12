@@ -7,7 +7,7 @@ import {
   relicName, relicDesc, rollRelicReward, rollBossRelicReward, applyRelicPickupEffect,
   allRelicIds, relicRarity, RELIC_RARITY_ORDER, RELIC_RARITY_LABELS,
 } from './relics.js';
-import { rollNormalEncounter, rollEliteEncounter, rollBossEncounter } from './enemies.js';
+import { rollNormalEncounter, rollEliteEncounter, rollBossEncounter, getEnemyDef, ACT_POOLS } from './enemies.js';
 import { generateMap, getNode, availableNodeIds, FLOORS, SLOTS } from './map.js';
 import { CombatEngine } from './combat.js';
 import { loadMeta, saveMeta, loadRun, saveRun, clearRun, hasSavedRun } from './state.js';
@@ -203,7 +203,7 @@ function handleActClear() {
   const clearedAct = run.act;
   run.act += 1;
   const missing = run.maxHp - run.hp;
-  run.hp = Math.min(run.maxHp, run.hp + Math.round(missing * 0.5));
+  run.hp = Math.min(run.maxHp, run.hp + Math.round(missing * 0.75));
   run.map = generateMap();
   run.currentNodeId = null;
   saveRun(run);
@@ -659,6 +659,62 @@ function renderRelicListModal() {
 el('btnRelicListTitle').addEventListener('click', renderRelicListModal);
 el('btnRelicListMap').addEventListener('click', renderRelicListModal);
 el('btnCloseRelicListModal').addEventListener('click', () => el('relicListModal').classList.add('hidden'));
+
+// ---------- Enemy list (bestiary) ----------
+const ACT_CATEGORY_LABELS = { normal: '通常', elite: 'エリート', boss: 'ボス' };
+
+function patternStepText(step) {
+  switch (step.kind) {
+    case 'attack': {
+      const hits = step.hits || 1;
+      return `攻撃 ${step.value}${hits > 1 ? `×${hits}` : ''}`;
+    }
+    case 'attackDebuff':
+      return `攻撃 ${step.value} + ${STATUS_LABELS[step.debuffStat] || step.debuffStat}${step.debuffAmount}`;
+    case 'defend':
+      return `防御 ${step.value}`;
+    case 'buff':
+      return `${step.stat === 'strength' ? '力' : step.stat}+${step.value}`;
+    case 'poison':
+      return `毒${step.value}付与`;
+    default:
+      return '?';
+  }
+}
+
+function enemyInfoCardHtml(id, category) {
+  const def = getEnemyDef(id);
+  const classes = ['enemy-info-card'];
+  if (category === 'elite') classes.push('is-elite');
+  if (category === 'boss') classes.push('is-boss');
+  const patternHtml = def.pattern.map(step => `<span class="e-pattern-step">${patternStepText(step)}</span>`).join('');
+  const thornsText = def.thorns ? ` / 棘${def.thorns}` : '';
+  return `<div class="${classes.join(' ')}">
+    <div class="e-name">${def.name}</div>
+    <div class="e-hp"><span class="hp-icon">♥</span> ${def.maxHp[0]}〜${def.maxHp[1]}${thornsText}</div>
+    <div class="e-pattern">${patternHtml}</div>
+  </div>`;
+}
+
+function renderEnemyListModal() {
+  let html = '';
+  for (const act of [1, 2, 3]) {
+    const pool = ACT_POOLS[act];
+    html += `<h4 class="card-list-group">第${act}層</h4>`;
+    for (const category of ['normal', 'elite', 'boss']) {
+      const ids = category === 'boss' ? [pool.boss] : pool[category];
+      html += `<h5 class="card-list-subgroup">${ACT_CATEGORY_LABELS[category]}</h5><div class="enemy-list-grid">`;
+      html += ids.map(id => enemyInfoCardHtml(id, category)).join('');
+      html += `</div>`;
+    }
+  }
+  el('enemyListModalBody').innerHTML = html;
+  el('enemyListModal').classList.remove('hidden');
+}
+
+el('btnEnemyListTitle').addEventListener('click', renderEnemyListModal);
+el('btnEnemyListMap').addEventListener('click', renderEnemyListModal);
+el('btnCloseEnemyListModal').addEventListener('click', () => el('enemyListModal').classList.add('hidden'));
 
 // ---------- Init ----------
 renderTitle();

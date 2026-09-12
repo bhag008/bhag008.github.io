@@ -24,6 +24,7 @@
         <button id="btnNewRun" class="btn btn-primary">新しいランを始める</button>
         <button id="btnCardListTitle" class="btn btn-ghost">カード一覧</button>
         <button id="btnRelicListTitle" class="btn btn-ghost">遺物一覧</button>
+        <button id="btnEnemyListTitle" class="btn btn-ghost">敵一覧</button>
       </div>
       <p class="title-hint">デッキを育て、灰塔の頂を目指せ。倒れれば最初から。</p>
     </div>
@@ -44,6 +45,7 @@
         <button id="btnViewDeck" class="btn btn-small">デッキ</button>
         <button id="btnCardListMap" class="btn btn-small">図鑑</button>
         <button id="btnRelicListMap" class="btn btn-small">遺物</button>
+        <button id="btnEnemyListMap" class="btn btn-small">敵</button>
       </div>
     </header>
     <div id="mapScroll" class="map-scroll">
@@ -171,6 +173,16 @@
         <button id="btnCloseRelicListModal" class="btn btn-small">閉じる</button>
       </div>
       <div id="relicListModalBody" class="card-list-body"></div>
+    </div>
+  </div>
+
+  <div id="enemyListModal" class="modal hidden">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h3>敵一覧</h3>
+        <button id="btnCloseEnemyListModal" class="btn btn-small">閉じる</button>
+      </div>
+      <div id="enemyListModalBody" class="card-list-body"></div>
     </div>
   </div>
 
