@@ -141,8 +141,8 @@ const ENEMY_DB = {
     pattern: [
       { kind: 'attack', value: 22 },
       { kind: 'poison', value: 6 },
-      { kind: 'buff', stat: 'strength', value: 5 },
       { kind: 'attack', value: 11, hits: 3 },
+      { kind: 'buff', stat: 'strength', value: 5 },
     ],
   },
 
@@ -210,8 +210,8 @@ const ENEMY_DB = {
     pattern: [
       { kind: 'attack', value: 30 },
       { kind: 'poison', value: 10 },
-      { kind: 'buff', stat: 'strength', value: 6 },
       { kind: 'attack', value: 14, hits: 3 },
+      { kind: 'buff', stat: 'strength', value: 6 },
       { kind: 'defend', value: 25 },
     ],
   },
