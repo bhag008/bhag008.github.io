@@ -50,7 +50,7 @@ function makeCreatureInstance(uid, cardId) {
     uid, tapped: false, sickness: true,
     tempPowerAttackerBonus: 0, tempDoubleBreaker: false,
     tempUnblockable: false, tempIgnoreTapRequirement: false,
-    tempStaticPowerBonus: 0, tempBlockerGrant: false,
+    tempStaticPowerBonus: 0, tempBlockerGrant: false, tempTripleBreaker: false, tempSlayerGrant: false,
     stack: [{ uid, cardId }],
   };
 }
@@ -67,6 +67,7 @@ export class DuelEngine {
     this.pendingShieldTriggers = [];
     this.pendingCip = null;
     this.pendingAttackTrigger = null;
+    this.pendingTapAbility = null;
     this.forceAllAttackSide = null;
     this.turnFlags = { player: {}, cpu: {} };
 
@@ -206,6 +207,12 @@ export class DuelEngine {
     // サバイバーの長から付与された「パワーアタッカー」にも対応(第5弾: ブレイズザウルスα)
     const pa = this.effectiveKeywordValue(side, inst, 'powerAttacker');
     if (pa) p += pa;
+    // 自分の場に指定文明の他のクリーチャーがいる/いないかで攻撃中のみパワーが変わる(第6弾: グチェラリオン=不在時、マグナム・ブルース=在時)
+    const civCond = keywordValue(def, 'powerAttackerIfOwnCivCondition');
+    if (civCond) {
+      const present = this.players[side].battle.some((c) => c !== inst && this.cardOf(c).civ === civCond.civ);
+      if (civCond.requireAbsent ? !present : present) p += civCond.amount;
+    }
     const cond = keywordValue(def, 'powerAttackerCondition');
     if (cond && this.hasRace(side, cond.race)) p += cond.amount;
     const gyCond = keywordValue(def, 'powerAttackerPerGraveyardCiv');
@@ -254,6 +261,9 @@ export class DuelEngine {
     if (hasKeyword(def, 'doubleBreakerIfManaMonoColor') && this.isManaMonoColor(side, def.civ)) return true;
     // サバイバーの長からのW・ブレイカー付与(第5弾: ブレイドラッシュ・ワイバーンδ)
     if (this.hasEffectiveKeyword(side, inst, 'doubleBreaker')) return true;
+    // 自分の場に指定文明の他のクリーチャーがいなければW・ブレイカーを得る(第6弾: グチェラリオン)
+    const dbAbsentCiv = keywordValue(def, 'doubleBreakerIfOwnCivAbsent');
+    if (dbAbsentCiv && !this.players[side].battle.some((c) => c !== inst && this.cardOf(c).civ === dbAbsentCiv)) return true;
     for (const s of ['player', 'cpu']) {
       for (const other of this.players[s].battle) {
         if (other === inst) continue;
@@ -266,9 +276,15 @@ export class DuelEngine {
 
   // シールドブレイク枚数(1/2/3)。T・ブレイカー(第5弾)を考慮する
   breakerCountNow(side, inst) {
-    if (this.hasEffectiveKeyword(side, inst, 'tripleBreaker')) return 3;
-    if (this.isDoubleBreakerNow(side, inst)) return 2;
-    return 1;
+    const def = this.cardOf(inst);
+    let n = 1;
+    if (inst.tempTripleBreaker || this.hasEffectiveKeyword(side, inst, 'tripleBreaker')) n = 3;
+    else if (this.isDoubleBreakerNow(side, inst)) n = 2;
+    // クルー・ブレイカー：サバイバー(第6弾: シグマ・トゥレイト) — 自分の他のサバイバー1体につき+1枚
+    if (hasKeyword(def, 'breakerBonusPerOtherSurvivor')) {
+      n += this.players[side].battle.filter((c) => c !== inst && (this.cardOf(c).race || '').includes('サバイバー')).length;
+    }
+    return n;
   }
 
   // ブロッカーかどうか(常時に加え、他クリーチャーからのオーラ付与・マナ単色条件も考慮)
@@ -310,6 +326,8 @@ export class DuelEngine {
         c.tempIgnoreTapRequirement = false;
         c.tempStaticPowerBonus = 0;
         c.tempBlockerGrant = false;
+        c.tempTripleBreaker = false;
+        c.tempSlayerGrant = false;
       }
     }
   }
@@ -403,6 +421,12 @@ export class DuelEngine {
       if (red && red.type === def.type) {
         cost -= red.amount;
         minCost = Math.max(minCost, red.minCost || 0);
+      }
+      // 特定種族のクリーチャーの召喚コストを下げる(第6弾: コッコ・ルピア=ドラゴン)
+      const redRace = keywordValue(d, 'costReductionRace');
+      if (redRace && def.type === 'creature' && def.race === redRace.race) {
+        cost -= redRace.amount;
+        minCost = Math.max(minCost, redRace.minCost || 0);
       }
     }
     // 特定文明のカードを出す/唱えるコストを増やす「税」(第4弾: 牢黒の伝道師ミリエス等)。
@@ -528,13 +552,39 @@ export class DuelEngine {
     this.logMsg(`${labelOf(side)}は${this.cardOf(c).name}を墓地からマナゾーンに置いた。`);
   }
 
+  // マッドネス(第6弾): 相手のターン中に手札から自分の墓地に置かれるはずの時、かわりにバトルゾーンに出る
+  sendHandCardToGraveyardOrMadness(side, cardObj) {
+    const ps = this.players[side];
+    const def = getCard(cardObj.cardId);
+    if (def.type === 'creature' && hasKeyword(def, 'madness') && this.turnSide !== side) {
+      const creature = makeCreatureInstance(cardObj.uid, cardObj.cardId);
+      ps.battle.push(creature);
+      this.onCreatureEnteredBattle(creature.uid);
+      this.triggerSurvivorOnPlay(side, creature);
+      this.logMsg(`${labelOf(side)}の${def.name}はマッドネスでバトルゾーンに出た!`);
+      if (def.onPlay) {
+        this._resolvingCipUid = creature.uid;
+        if (def.onPlay.target) {
+          const candidates = this.getTargetCandidates(side, def.onPlay.target) || [];
+          const max = typeof def.onPlay.target.max === 'function' ? def.onPlay.target.max(this, side) : (def.onPlay.target.max ?? 1);
+          this.resolveCardAbility(side, def, def.onPlay, candidates.slice(0, max));
+        } else {
+          this.resolveCardAbility(side, def, def.onPlay, []);
+        }
+        this._resolvingCipUid = null;
+      }
+      return;
+    }
+    ps.graveyard.push(cardObj);
+  }
+
   discardRandomFromHand(side, n = 1) {
     const ps = this.players[side];
     let discarded = 0;
     for (let i = 0; i < n && ps.hand.length > 0; i++) {
       const idx = Math.floor(Math.random() * ps.hand.length);
       const [c] = ps.hand.splice(idx, 1);
-      ps.graveyard.push(c);
+      this.sendHandCardToGraveyardOrMadness(side, c);
       discarded++;
     }
     if (discarded > 0) this.logMsg(`${labelOf(side)}は手札を${discarded}枚(ランダムに選ばれて)捨てた。`);
@@ -548,7 +598,7 @@ export class DuelEngine {
       let worstIdx = 0;
       ps.hand.forEach((c, ci) => { if (getCard(c.cardId).cost < getCard(ps.hand[worstIdx].cardId).cost) worstIdx = ci; });
       const [c] = ps.hand.splice(worstIdx, 1);
-      ps.graveyard.push(c);
+      this.sendHandCardToGraveyardOrMadness(side, c);
     }
     if (count > 0) this.logMsg(`${labelOf(side)}は手札を${count}枚捨てた。`);
   }
@@ -559,16 +609,29 @@ export class DuelEngine {
     const idx = ps.hand.findIndex((c) => c.uid === uid);
     if (idx === -1) return;
     const [c] = ps.hand.splice(idx, 1);
-    ps.graveyard.push(c);
+    this.sendHandCardToGraveyardOrMadness(side, c);
     this.logMsg(`${labelOf(side)}は手札を1枚捨てさせられた。`);
   }
 
   discardAllHand(side) {
     const ps = this.players[side];
     const n = ps.hand.length;
-    ps.graveyard.push(...ps.hand);
+    const hand = ps.hand;
     ps.hand = [];
+    for (const c of hand) this.sendHandCardToGraveyardOrMadness(side, c);
     if (n > 0) this.logMsg(`${labelOf(side)}は手札をすべて(${n}枚)捨てた。`);
+  }
+
+  // 相手の手札を見て、条件に合うカードをすべて持ち主の墓地に置く(第6弾: レイン・アロー)
+  discardAllMatchingFromHand(side, filterFn) {
+    const ps = this.players[side];
+    const matches = ps.hand.filter((c) => filterFn(getCard(c.cardId)));
+    for (const c of matches) {
+      const idx = ps.hand.indexOf(c);
+      if (idx !== -1) ps.hand.splice(idx, 1);
+      this.sendHandCardToGraveyardOrMadness(side, c);
+    }
+    if (matches.length > 0) this.logMsg(`${labelOf(side)}の手札から${matches.length}枚が墓地に置かれた。`);
   }
 
   // 山札を検索して1枚(条件を満たすもの)を手札に加え、シャッフルする
@@ -583,6 +646,18 @@ export class DuelEngine {
       }
     }
     ps.deck = shuffle(ps.deck);
+  }
+
+  // 山札から好きな枚数を選んで手札に加え、シャッフルする(第6弾: インビンシブル・テクノロジー)
+  tutorMultiFromDeck(side, uids) {
+    const ps = this.players[side];
+    let taken = 0;
+    for (const uid of uids) {
+      const idx = ps.deck.findIndex((c) => c.uid === uid);
+      if (idx !== -1) { const [c] = ps.deck.splice(idx, 1); ps.hand.push(c); taken++; }
+    }
+    ps.deck = shuffle(ps.deck);
+    if (taken > 0) this.logMsg(`${labelOf(side)}は山札から${taken}枚を手札に加えた。`);
   }
 
   // 山札を検索して1枚を自分のマナゾーンに置き、シャッフルする
@@ -648,6 +723,16 @@ export class DuelEngine {
       this.logMsg(`あなたは相手のシールドを見た: ${names || 'なし'}`);
     } else {
       this.logMsg(`${labelOf(side)}は相手のシールドを確認した。`);
+    }
+  }
+
+  // 自分自身のシールドをすべて見る(第6弾: 宣凶師エルリオット)。中身は変わらず元の位置のまま
+  peekOwnShields(side) {
+    if (side === 'player') {
+      const names = this.players.player.shields.map((s) => getCard(s.cardId).name).join('、');
+      this.logMsg(`あなたは自分のシールドを見た: ${names || 'なし'}`);
+    } else {
+      this.logMsg(`${labelOf(side)}は自分のシールドを確認した。`);
     }
   }
 
@@ -942,6 +1027,67 @@ export class DuelEngine {
     this.logMsg(`${getCard(removed.cardId).name}が進化元を残して墓地に置かれた。`);
   }
 
+  // 進化クリーチャーの一番上のカードだけを剥がして持ち主のマナゾーンに置く(第6弾: 大自然の意志)
+  peelTopOfEvolutionToMana(ownerSide, uid) {
+    const ps = this.players[ownerSide];
+    const slot = ps.battle.find((c) => c.uid === uid);
+    if (!slot || !slot.stack || slot.stack.length < 2) return;
+    const removed = slot.stack.pop();
+    ps.mana.push({ uid: removed.uid, cardId: removed.cardId, tapped: false });
+    this.logMsg(`${getCard(removed.cardId).name}が進化元を残してマナゾーンに置かれた。`);
+  }
+
+  // 相手のシールドを裏向きのまま最大n枚選び、公開せずそのまま持ち主の墓地に置く(第6弾: インビンシブル・フォートレス)
+  burnOpponentShields(side, n) {
+    const opp = this.opponent(side);
+    const ps = this.players[opp];
+    const count = Math.min(n, ps.shields.length);
+    for (let i = 0; i < count; i++) {
+      const shield = ps.shields.pop();
+      ps.graveyard.push(shield);
+    }
+    if (count > 0) this.logMsg(`${labelOf(opp)}のシールドが${count}枚焼却された。`);
+  }
+
+  // バトルゾーンにある、ブロッカーを持たないクリーチャーをすべてタップする(第6弾: ジャスティス・バインド)
+  tapAllNonBlockers() {
+    for (const s of ['player', 'cpu']) {
+      for (const c of this.players[s].battle) {
+        if (!this.isBlockerNow(s, c)) c.tapped = true;
+      }
+    }
+  }
+
+  // 相手はバトルゾーンかマナゾーンから自分自身のカードを1枚選び、持ち主の墓地に置く(第6弾: クライシス・ボーラー)。
+  // 本来は相手の任意選択だが、簡略化のため最も安価な方(クリーチャーはコスト、マナは文明内訳を考慮せず単純比較)を自動選択する
+  opponentForcedDestroyCreatureOrMana(side) {
+    const opp = this.opponent(side);
+    const ps = this.players[opp];
+    const weakestCreatureUid = this.pickWeakestOwnCreatureUid(opp);
+    const weakestCreature = weakestCreatureUid != null ? ps.battle.find((c) => c.uid === weakestCreatureUid) : null;
+    let weakestMana = null;
+    for (const m of ps.mana) { if (!weakestMana || getCard(m.cardId).cost < getCard(weakestMana.cardId).cost) weakestMana = m; }
+    if (!weakestCreature && !weakestMana) return;
+    if (weakestCreature && (!weakestMana || this.cardOf(weakestCreature).cost <= getCard(weakestMana.cardId).cost)) {
+      this.destroyCreature(opp, weakestCreature.uid);
+    } else if (weakestMana) {
+      this.manaCardToGraveyard(opp, weakestMana.uid);
+    }
+  }
+
+  // 相手の山札をすべて見て、選んだカードを持ち主の墓地に置き、その後シャッフルする(第6弾: ヘル・スラッシュ)
+  millChosenFromDeck(side, uids) {
+    const opp = this.opponent(side);
+    const ps = this.players[opp];
+    let milled = 0;
+    for (const uid of uids) {
+      const idx = ps.deck.findIndex((c) => c.uid === uid);
+      if (idx !== -1) { const [c] = ps.deck.splice(idx, 1); ps.graveyard.push(c); milled++; }
+    }
+    ps.deck = shuffle(ps.deck);
+    if (milled > 0) this.logMsg(`${labelOf(opp)}の山札から${milled}枚が墓地に置かれた。`);
+  }
+
   // 相手の手札とシールドをのぞき見る(情報効果のみ)。人間プレイヤー側が見た時だけログに内容を出す。
   peekOpponentHandAndShields(side) {
     const opp = this.opponent(side);
@@ -978,6 +1124,10 @@ export class DuelEngine {
 
   teamGrantDoubleBreaker(side) {
     for (const c of this.players[side].battle) c.tempDoubleBreaker = true;
+  }
+
+  teamGrantTripleBreaker(side) {
+    for (const c of this.players[side].battle) c.tempTripleBreaker = true;
   }
 
   // 指定文明以外の呪文をすべて封じるロックがバトルゾーンに存在するか(第4弾: 聖霊王アルカディアス)。
@@ -1036,7 +1186,16 @@ export class DuelEngine {
     else if (spec.kind === 'enemyHandCard') pool = this.players[opp].hand;
     else if (spec.kind === 'enemyManaCard') pool = this.players[opp].mana;
     else if (spec.kind === 'ownManaCard') pool = this.players[side].mana;
+    else if (spec.kind === 'enemyDeckCard') pool = this.players[opp].deck;
     return pool.filter((c) => filter(this, side, c)).map((c) => c.uid);
+  }
+
+  // 相手が召喚/呪文詠唱したとき、自分の「相手の行動時ブロッカーを得る」持ちにこのターン限りブロッカーを付与する(第6弾)
+  triggerBlockerOnOpponentAction(actingSide) {
+    const opp = this.opponent(actingSide);
+    for (const c of this.players[opp].battle) {
+      if (hasKeyword(this.cardOf(c), 'blockerOnOpponentAction')) c.tempBlockerGrant = true;
+    }
   }
 
   // ---- カードプレイ ----
@@ -1049,14 +1208,18 @@ export class DuelEngine {
     const def = getCard(inst.cardId);
     if (!this.canPayCost(side, def)) return { ok: false };
     if (this.isSpellCastLocked(def)) return { ok: false };
+    // 呪文を唱えたターンのみ召喚できる(第6弾: 綺羅星の精霊ガリアル等)
+    if (def.type === 'creature' && hasKeyword(def, 'requiresSpellCastThisTurn') && !this.turnFlags[side]?.spellCastThisTurn) return { ok: false };
     ps.hand.splice(idx, 1);
     this.payCost(side, def);
     if (def.type === 'creature') {
       const creature = makeCreatureInstance(inst.uid, inst.cardId);
-      // スピードアタッカー(第5弾): 召喚酔いしない
-      if (hasKeyword(def, 'speedAttacker')) creature.sickness = false;
       ps.battle.push(creature);
+      // スピードアタッカー(第5弾): 召喚酔いしない。サバイバーの長からの付与にも対応(第6弾: スフィンティラノスβ)
+      if (this.hasEffectiveKeyword(side, creature, 'speedAttacker')) creature.sickness = false;
       this.onCreatureEnteredBattle(creature.uid);
+      this.triggerSurvivorOnPlay(side, creature);
+      this.triggerBlockerOnOpponentAction(side);
       this.logMsg(`${labelOf(side)}は${def.name}を召喚した。`);
       if (def.onPlay) {
         // CIP(出た時)能力は「先にバトルゾーンへ出てから対象を選ぶ」実タイミングを再現するため、
@@ -1070,6 +1233,9 @@ export class DuelEngine {
         this._resolvingCipUid = null;
       }
     } else {
+      this.turnFlags[side] = this.turnFlags[side] || {};
+      this.turnFlags[side].spellCastThisTurn = true;
+      this.triggerBlockerOnOpponentAction(side);
       this.logMsg(`${labelOf(side)}は${def.name}を唱えた。`);
       if (def.spell) this.resolveCardAbility(side, def, def.spell, opts.targetUids || (opts.targetUid != null ? [opts.targetUid] : []));
       if (hasKeyword(def, 'castGoesToMana')) ps.mana.push({ uid: inst.uid, cardId: inst.cardId, tapped: false });
@@ -1086,6 +1252,8 @@ export class DuelEngine {
     if (!req) return [];
     return this.players[side].battle.filter((slot) => {
       const topDef = this.cardOf(slot);
+      // 種族を問わずどんな進化クリーチャーでも上に置ける汎用進化元(第6弾: 無垢の宝剣)
+      if (hasKeyword(topDef, 'universalEvolutionBase')) return true;
       if (req.fromRaces) return req.fromRaces.includes(topDef.race);
       if (req.fromCivilization) {
         return Array.isArray(topDef.civ) ? topDef.civ.includes(req.fromCivilization) : topDef.civ === req.fromCivilization;
@@ -1111,7 +1279,12 @@ export class DuelEngine {
     this.payCost(side, def);
     slot.stack.push({ uid: inst.uid, cardId: inst.cardId });
     slot.sickness = false;
+    // 進化クリーチャーがタップされた状態でバトルゾーンに出る効果(第6弾: 銀界の守護者ル・ギラ・レシール、両陣営どちらにあっても作用)
+    if (['player', 'cpu'].some((s) => this.players[s].battle.some((c) => hasKeyword(this.cardOf(c), 'evolutionEntersTapped')))) {
+      slot.tapped = true;
+    }
     this.onCreatureEnteredBattle(slot.uid);
+    this.triggerSurvivorOnPlay(side, slot);
     this.logMsg(`${labelOf(side)}は${def.name}に進化させた。`);
     if (def.onPlay) {
       if (def.onPlay.target) {
@@ -1165,6 +1338,31 @@ export class DuelEngine {
     }
   }
 
+  // 自分の場に、指定種族すべてにスレイヤーを与える常時能力持ちがいるか(第6弾: 恐慌の魔黒デス・スペクター、自分自身も対象に含む)
+  hasRaceGrantedSlayer(side, inst) {
+    const def = this.cardOf(inst);
+    return this.players[side].battle.some((c) => keywordValue(this.cardOf(c), 'auraGrantSlayerToOwnRace') === def.race);
+  }
+
+  // サバイバー(第6弾): 自分の他のサバイバーの長が持つ「出た時」能力を、このクリーチャーが出た時にも発火させる。
+  // 対象選択が必要な能力は、簡略化のため候補の先頭から必要数を自動選択する
+  triggerSurvivorOnPlay(side, enteringInst) {
+    const enteringDef = this.cardOf(enteringInst);
+    if (!(enteringDef.race || '').includes('サバイバー')) return;
+    for (const other of this.players[side].battle) {
+      if (other === enteringInst) continue;
+      const otherDef = this.cardOf(other);
+      if (!(otherDef.race || '').includes('サバイバー') || !otherDef.onPlay || keywordValue(otherDef, 'survivorGrants') !== 'onPlay') continue;
+      if (otherDef.onPlay.target) {
+        const candidates = this.getTargetCandidates(side, otherDef.onPlay.target) || [];
+        const max = typeof otherDef.onPlay.target.max === 'function' ? otherDef.onPlay.target.max(this, side) : (otherDef.onPlay.target.max ?? 1);
+        this.resolveCardAbility(side, otherDef, otherDef.onPlay, candidates.slice(0, max));
+      } else {
+        this.resolveCardAbility(side, otherDef, otherDef.onPlay, []);
+      }
+    }
+  }
+
   // ---- 攻撃フェーズ ----
   enterAttackPhase() {
     if (this.phase === 'main') this.phase = 'attack';
@@ -1180,7 +1378,24 @@ export class DuelEngine {
     }
     // 相手のシールドが0枚の間は攻撃できない(第5弾: 剣舞の修羅ヴァシュナ/ギガゾウル)
     if (hasKeyword(def, 'cannotAttackIfEnemyShieldless') && this.players[this.opponent(side)].shields.length === 0) return false;
+    // 自分の他のクリーチャーを1体生け贄にしなければ攻撃できない(第6弾: 憤怒の猛将ダイダロス)。他に生け贄がいなければ攻撃自体が不可
+    if (hasKeyword(def, 'mustSacrificeToAttack') && this.players[side].battle.filter((c) => c !== inst).length === 0) return false;
+    // 自分の他のクリーチャーにアンタップ状態のものが1体でもあれば攻撃できない(第6弾: 神秘の超人)
+    if (hasKeyword(def, 'cannotAttackIfOtherUntapped') && this.players[side].battle.some((c) => c !== inst && !c.tapped)) return false;
     return true;
+  }
+
+  // このサイドの攻撃時に、相手の「求心」的な種族強制ターゲットが存在すればそのuid一覧を返す(第6弾: 戦いの化身)
+  getForcedAttackTargets(side) {
+    const opp = this.opponent(side);
+    const races = new Set();
+    for (const c of this.players[opp].battle) {
+      const race = keywordValue(this.cardOf(c), 'forcesAttacksAgainstRace');
+      if (race) races.add(race);
+    }
+    if (races.size === 0) return null;
+    const eligible = this.players[opp].battle.filter((c) => races.has(this.cardOf(c).race));
+    return eligible.length > 0 ? eligible.map((c) => c.uid) : null;
   }
 
   eligibleAttackers(side) {
@@ -1214,13 +1429,18 @@ export class DuelEngine {
         .filter((c) => onlyUntappedCivs.includes(this.cardOf(c).civ) && !c.tapped)
         .map((c) => c.uid);
     }
-    return this.players[opp].battle
+    let pool = this.players[opp].battle
       .filter((c) => this.canTargetCreature(side, attacker, c))
       // 特定文明の攻撃を回避する(第4弾: 神速の守護者グラン・リエス/パープル・ピアス)
       .filter((c) => keywordValue(this.cardOf(c), 'evadeCiv') !== atkCiv)
       // 特定文明からは攻撃対象にされない(第5弾: スチールアーム・クラスター)
-      .filter((c) => !(keywordValue(this.cardOf(c), 'cannotBeAttackedByCiv') || []).includes(atkCiv))
-      .map((c) => c.uid);
+      .filter((c) => !(keywordValue(this.cardOf(c), 'cannotBeAttackedByCiv') || []).includes(atkCiv));
+    // ブロッカーしか攻撃できない(第6弾: 戦男)
+    if (hasKeyword(atkDef, 'canOnlyAttackBlockers')) pool = pool.filter((c) => this.isBlockerNow(opp, c));
+    // 求心的な種族強制ターゲット(第6弾: 戦いの化身)があれば、それに絞り込む
+    const forced = this.getForcedAttackTargets(side);
+    if (forced) pool = pool.filter((c) => forced.includes(c.uid));
+    return pool.map((c) => c.uid);
   }
 
   // 攻撃側の「ブロックされない」度合いを、ブロッカー側に要求される最低パワーとして返す(Infinityなら完全にブロック不可)
@@ -1282,6 +1502,15 @@ export class DuelEngine {
     if (target.type === 'creature' && !this.canTargetCreature(side, atk, this.players[this.opponent(side)].battle.find((c) => c.uid === target.uid) || {})) {
       return { ok: false };
     }
+    // 求心的な種族強制ターゲット(第6弾: 戦いの化身)がある間は、プレイヤーへの攻撃も対象外のクリーチャーへの攻撃も不可
+    const forcedTargets = this.getForcedAttackTargets(side);
+    if (forcedTargets && (target.type === 'player' || !forcedTargets.includes(target.uid))) return { ok: false };
+    // 自分の他のクリーチャーを1体生け贄にしなければ攻撃できない(第6弾: 憤怒の猛将ダイダロス)。自動で最も弱いものを選ぶ
+    if (hasKeyword(atkDef, 'mustSacrificeToAttack')) {
+      const sacUid = this.pickWeakestOwnCreatureUid(side, attackerUid);
+      if (sacUid == null) return { ok: false };
+      this.destroyCreature(side, sacUid);
+    }
     atk.tapped = true;
     const opp = this.opponent(side);
     const ops = this.players[opp];
@@ -1330,6 +1559,62 @@ export class DuelEngine {
     const { attackerSide, attackerUid, target } = this.pendingBlock;
     this.pendingBlock = null;
     this.resolveCombat(attackerSide, attackerUid, target, blockerUid || null);
+    return { ok: true };
+  }
+
+  // ---- タップ能力(第6弾で追加): 攻撃するかわりに、クリーチャーをタップして能力を使う ----
+  // 自身の tapAbility を持つか、同じ文明に tapAbility を配る別のクリーチャー(tapAbilityGrantToCiv)から借用する
+  resolveTapAbilityFor(side, inst) {
+    const def = this.cardOf(inst);
+    if (def.tapAbility) return { ability: def.tapAbility, sourceDef: def };
+    for (const other of this.players[side].battle) {
+      if (other === inst) continue;
+      const otherDef = this.cardOf(other);
+      if (keywordValue(otherDef, 'tapAbilityGrantToCiv') === def.civ && otherDef.tapAbility) {
+        return { ability: otherDef.tapAbility, sourceDef: otherDef };
+      }
+    }
+    return null;
+  }
+
+  // このクリーチャーが攻撃するかわりにタップ能力を使えるか(攻撃可能な条件と同じ: 未タップ・召喚酔いでない)
+  canUseTapAbility(side, uid) {
+    if (this.phase !== 'attack' || this.isGameOver()) return false;
+    const inst = this.players[side].battle.find((c) => c.uid === uid);
+    if (!inst || inst.tapped) return false;
+    const ignore = this.turnFlags[side]?.ignoreAttackRestrictions;
+    if (!ignore && inst.sickness) return false;
+    return !!this.resolveTapAbilityFor(side, inst);
+  }
+
+  useTapAbility(side, uid) {
+    if (!this.canUseTapAbility(side, uid)) return { ok: false };
+    const inst = this.players[side].battle.find((c) => c.uid === uid);
+    const found = this.resolveTapAbilityFor(side, inst);
+    if (!found) return { ok: false };
+    inst.tapped = true;
+    const def = this.cardOf(inst);
+    this.logMsg(`${labelOf(side)}は${def.name}をタップして能力を使った。`);
+    if (found.ability.target) {
+      this.pendingTapAbility = { side, uid, ability: found.ability, def: found.sourceDef };
+      return { ok: true, awaitingTapAbilityTarget: true };
+    }
+    this.resolveCardAbility(side, found.sourceDef, found.ability, []);
+    this.checkStateBasedLoss();
+    return { ok: true };
+  }
+
+  getPendingTapAbilityCandidates() {
+    if (!this.pendingTapAbility) return null;
+    return this.getTargetCandidates(this.pendingTapAbility.side, this.pendingTapAbility.ability.target);
+  }
+
+  resolveTapAbility(targetUids) {
+    if (!this.pendingTapAbility) return { ok: false };
+    const { side, def, ability } = this.pendingTapAbility;
+    this.resolveCardAbility(side, def, ability, targetUids || []);
+    this.pendingTapAbility = null;
+    this.checkStateBasedLoss();
     return { ok: true };
   }
 
@@ -1437,25 +1722,32 @@ export class DuelEngine {
       if (defCreature) {
         const defDef = this.cardOf(defCreature);
         const defPower = this.powerBase(opp, defCreature);
-        this.logMsg(`${atkDef.name}(${atkPower}) と ${defDef.name}(${defPower}) がバトル!`);
-        // サバイバーの長からのスレイヤー付与、および文明限定スレイヤー(第5弾)にも対応
-        const atkIsSlayer = this.hasEffectiveKeyword(side, atk, 'slayer') || civSlayerMatches(atkDef, defDef);
-        const defIsSlayer = this.hasEffectiveKeyword(opp, defCreature, 'slayer') || civSlayerMatches(defDef, atkDef);
-        let atkDies = atkPower <= defPower;
-        let defDies = defPower <= atkPower;
-        if (defIsSlayer) atkDies = true;
-        if (atkIsSlayer) defDies = true;
-        if (hasKeyword(atkDef, 'selfDestructAfterBattle')) atkDies = true;
-        if (hasKeyword(defDef, 'selfDestructAfterBattle')) defDies = true;
-        if (blocked && this.turnFlags[side]?.blockersDieAfterBattle) defDies = true;
-        if (defDies) this.destroyCreature(opp, fightUid);
-        if (atkDies) this.destroyCreature(side, attackerUid);
-        if (blocked && !defDies && hasKeyword(defDef, 'untapAfterBlocking')) {
-          const survivor = ops.battle.find((c) => c.uid === fightUid);
-          if (survivor) survivor.tapped = false;
+        // ブロックされた場合バトル自体が発生しない(第6弾: ピーカプ・リザード等の攻撃側、不屈の使徒チーキ・クーレ等のブロック側)。
+        // 両者はタップされたままで、勝敗判定も破壊も一切発生しない。
+        const skipBattle = blocked && (hasKeyword(atkDef, 'noBattleWhenBlocked') || hasKeyword(defDef, 'noBattleWhenBlocking'));
+        if (skipBattle) {
+          this.logMsg(`${atkDef.name}の攻撃は${defDef.name}に阻止されたが、バトルは行われなかった。`);
+        } else {
+          this.logMsg(`${atkDef.name}(${atkPower}) と ${defDef.name}(${defPower}) がバトル!`);
+          // サバイバーの長からのスレイヤー付与、および文明限定スレイヤー(第5弾)にも対応
+          const atkIsSlayer = this.hasEffectiveKeyword(side, atk, 'slayer') || civSlayerMatches(atkDef, defDef) || atk.tempSlayerGrant || this.hasRaceGrantedSlayer(side, atk);
+          const defIsSlayer = this.hasEffectiveKeyword(opp, defCreature, 'slayer') || civSlayerMatches(defDef, atkDef) || defCreature.tempSlayerGrant || this.hasRaceGrantedSlayer(opp, defCreature);
+          let atkDies = atkPower <= defPower;
+          let defDies = defPower <= atkPower;
+          if (defIsSlayer) atkDies = true;
+          if (atkIsSlayer) defDies = true;
+          if (hasKeyword(atkDef, 'selfDestructAfterBattle')) atkDies = true;
+          if (hasKeyword(defDef, 'selfDestructAfterBattle')) defDies = true;
+          if (blocked && this.turnFlags[side]?.blockersDieAfterBattle) defDies = true;
+          if (defDies) this.destroyCreature(opp, fightUid);
+          if (atkDies) this.destroyCreature(side, attackerUid);
+          if (blocked && !defDies && hasKeyword(defDef, 'untapAfterBlocking')) {
+            const survivor = ops.battle.find((c) => c.uid === fightUid);
+            if (survivor) survivor.tapped = false;
+          }
         }
       }
-      // ブロックされた時、相手にシールドが1枚でもあれば1枚ブレイクする(第5弾: 神拳の超人)
+      // ブロックされた時、相手にシールドが1枚でもあれば1枚ブレイクする(第5弾: 神拳の超人、第6弾: ガイアクロウ・ワスプ)
       if (blocked && hasKeyword(atkDef, 'breakShieldWhenBlocked') && this.players[opp].shields.length > 0) {
         this.breakShields(opp, 1, side);
       }
@@ -1463,7 +1755,8 @@ export class DuelEngine {
       // ポコルルの「S・トリガーを使われたらアンタップしてもよい」判定用に、直前のブレイク元を記録する
       this._lastBreakAttackerUid = attackerUid;
       this._lastBreakAttackerSide = side;
-      this.breakShields(opp, this.breakerCountNow(side, atk), side);
+      // シールド焼却(第6弾: ボルメテウス・ホワイト・ドラゴン) — ブレイクしたシールドは手札に加わらず墓地に置かれ、S・トリガーも使えない
+      this.breakShields(opp, this.breakerCountNow(side, atk), side, hasKeyword(atkDef, 'shieldBurnOnBreak'));
     }
     if (target.type === 'player' && hasKeyword(atkDef, 'selfDestructAfterAttackingPlayer')) {
       const stillThere = this.players[side].battle.find((c) => c.uid === attackerUid);
@@ -1474,7 +1767,7 @@ export class DuelEngine {
 
   // breakerSideを渡すと、そのプレイヤー視点で「今ターン何枚シールドを割ったか」を記録し、
   // ドロー系の遅延効果(ミラクル・サーチャー等)やターン終了時の集計(ビースト・チャージ)に使う
-  breakShields(side, breakerCount, breakerSide) {
+  breakShields(side, breakerCount, breakerSide, burnMode) {
     const ps = this.players[side];
     if (ps.shields.length === 0) {
       this.result = this.opponent(side);
@@ -1484,6 +1777,16 @@ export class DuelEngine {
     const n = Math.min(breakerCount, ps.shields.length);
     for (let i = 0; i < n; i++) {
       const shield = ps.shields.pop();
+      // シールド焼却(第6弾): 手札に加わらず、S・トリガーも使えないまま持ち主の墓地に置かれる
+      if (burnMode) {
+        ps.graveyard.push(shield);
+        this.logMsg(`${labelOf(side)}のシールドが1枚焼却された。`);
+        if (breakerSide) {
+          this.turnFlags[breakerSide] = this.turnFlags[breakerSide] || {};
+          this.turnFlags[breakerSide].shieldsBrokenThisTurn = (this.turnFlags[breakerSide].shieldsBrokenThisTurn || 0) + 1;
+        }
+        continue;
+      }
       ps.hand.push(shield);
       const def = getCard(shield.cardId);
       // ブレイクされたカードの正体は、シールド・トリガーとして実際に使用されるまで非公開にする
@@ -1514,9 +1817,11 @@ export class DuelEngine {
     const def = getCard(inst.cardId);
     if (def.type === 'creature') {
       const creature = makeCreatureInstance(inst.uid, inst.cardId);
-      if (hasKeyword(def, 'speedAttacker')) creature.sickness = false;
       ps.battle.push(creature);
+      if (this.hasEffectiveKeyword(item.side, creature, 'speedAttacker')) creature.sickness = false;
       this.onCreatureEnteredBattle(creature.uid);
+      this.triggerSurvivorOnPlay(item.side, creature);
+      this.triggerBlockerOnOpponentAction(item.side);
       this.logMsg(`${labelOf(item.side)}はS・トリガーで${def.name}を出した!`);
       if (def.onPlay) {
         this._resolvingCipUid = creature.uid;
@@ -1527,6 +1832,9 @@ export class DuelEngine {
       ps.graveyard.push(inst);
       this.logMsg(`${labelOf(item.side)}は${def.name}を唱えようとしたが、封じられていた。`);
     } else {
+      this.turnFlags[item.side] = this.turnFlags[item.side] || {};
+      this.turnFlags[item.side].spellCastThisTurn = true;
+      this.triggerBlockerOnOpponentAction(item.side);
       this.logMsg(`${labelOf(item.side)}はS・トリガーで${def.name}を唱えた!`);
       if (def.spell) this.resolveCardAbility(item.side, def, def.spell, targetUids || []);
       if (hasKeyword(def, 'castGoesToMana')) ps.mana.push({ uid: inst.uid, cardId: inst.cardId, tapped: false });
@@ -1557,6 +1865,15 @@ export class DuelEngine {
     if (this.turnFlags[this.turnSide]?.beastChargeActive) {
       const n = this.turnFlags[this.turnSide].shieldsBrokenThisTurn || 0;
       if (n > 0) this.autoTutorMultiFromDeck(this.turnSide, n, (engine, side, c) => getCard(c.cardId).type === 'creature');
+    }
+    // 自分のターンの終わりに自分の手札に戻る(第6弾: バザガジール・ドラゴン等)
+    for (const c of [...this.players[this.turnSide].battle]) {
+      if (hasKeyword(this.cardOf(c), 'returnToHandEndOfTurn')) this.bounceCreature(this.turnSide, c.uid);
+    }
+    // 自分のターンの終わりに、自分の場でこのクリーチャーだけであれば自分の墓地に置かれる(第6弾: 戦慄の剛将アブリン等)
+    if (this.players[this.turnSide].battle.length === 1) {
+      const [only] = this.players[this.turnSide].battle;
+      if (hasKeyword(this.cardOf(only), 'selfDestructIfAloneEndOfTurn')) this.destroyCreature(this.turnSide, only.uid);
     }
     this.clearTurnTempEffects();
     this.turnFlags = { player: {}, cpu: {} };

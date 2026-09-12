@@ -241,7 +241,7 @@ function renderCivTabs() {
 function renderSetTabs() {
   const tabs = $('setTabs');
   tabs.innerHTML = '';
-  const options = [['all', 'すべて'], ['DM-01', '第1弾'], ['DM-02', '第2弾'], ['DM-03', '第3弾'], ['DM-04', '第4弾'], ['DM-05', '第5弾']];
+  const options = [['all', 'すべて'], ['DM-01', '第1弾'], ['DM-02', '第2弾'], ['DM-03', '第3弾'], ['DM-04', '第4弾'], ['DM-05', '第5弾'], ['DM-06', '第6弾']];
   for (const [value, label] of options) {
     const b = document.createElement('button');
     b.className = 'btn btn-small set-tab' + (editSetFilter === value ? ' active' : '');
@@ -264,6 +264,8 @@ function keywordBadges(def) {
   if (def.keywords?.slayer) kw.push('SL');
   if (def.keywords?.speedAttacker) kw.push('SA');
   if ((def.race || '').includes('サバイバー')) kw.push('SV');
+  if (def.tapAbility) kw.push('TT');
+  if (def.keywords?.madness) kw.push('MD');
   return kw;
 }
 
@@ -271,7 +273,7 @@ function cardMiniCard(def, count) {
   const div = document.createElement('div');
   div.className = 'mini-card civ-' + def.civ;
   const kw = keywordBadges(def);
-  const setLabelMap = { 'DM-05': '第5弾', 'DM-04': '第4弾', 'DM-03': '第3弾', 'DM-02': '第2弾' };
+  const setLabelMap = { 'DM-06': '第6弾', 'DM-05': '第5弾', 'DM-04': '第4弾', 'DM-03': '第3弾', 'DM-02': '第2弾' };
   const setLabel = setLabelMap[cardSet(def)] || '第1弾';
   div.innerHTML = `
     <div class="mini-card-top">
@@ -506,9 +508,10 @@ function renderBattle() {
   const ignoreRestrictions = engine.turnFlags.player?.ignoreAttackRestrictions;
   for (const c of me.battle) {
     const eligible = !c.tapped && (ignoreRestrictions || !c.sickness) && engine.canAttackAtAll('player', c);
+    const tapAbilityEligible = myTurn && engine.phase === 'attack' && engine.canUseTapAbility('player', c.uid);
     selfBattle.appendChild(renderZoneCard('player', c, {
       selected: c.uid === selectedAttackerUid,
-      onClick: (myTurn && engine.phase === 'attack' && eligible) ? () => selectAttacker(c.uid) : null,
+      onClick: (myTurn && engine.phase === 'attack' && (eligible || tapAbilityEligible)) ? () => selectAttacker(c.uid) : null,
     }));
   }
   $('selfManaZone').innerHTML = `<span class="zone-label">マナ: ${me.mana.filter((m) => !m.tapped).length}/${me.mana.length}</span>${manaCivBreakdown(me)}`;
@@ -549,6 +552,7 @@ function renderBattle() {
   $('btnChargeMana').classList.toggle('active', manaChargeMode);
   $('btnAttackPhase').classList.toggle('hidden', !(myTurn && engine.phase === 'main'));
   $('btnAttackFace').classList.toggle('hidden', !(myTurn && engine.phase === 'attack' && selectedAttackerUid));
+  $('btnUseTapAbility').classList.toggle('hidden', !(myTurn && engine.phase === 'attack' && selectedAttackerUid && engine.canUseTapAbility('player', selectedAttackerUid)));
   $('btnCancelSelection').classList.toggle('hidden', !selectedAttackerUid);
   $('btnEndTurn').disabled = !myTurn;
 }
@@ -653,6 +657,26 @@ function checkGameOverAfterAction() {
   if (engine.isGameOver()) showResult();
 }
 
+function useTapAbility() {
+  if (!selectedAttackerUid) return;
+  const uid = selectedAttackerUid;
+  selectedAttackerUid = null;
+  const result = engine.useTapAbility('player', uid);
+  renderBattle();
+  if (!result.ok) return;
+  if (result.awaitingTapAbilityTarget) {
+    const spec = engine.pendingTapAbility.ability.target;
+    promptTargetSelection('player', spec, (uids) => {
+      engine.resolveTapAbility(uids);
+      renderBattle();
+      checkGameOverAfterAction();
+    });
+    return;
+  }
+  checkGameOverAfterAction();
+}
+
+$('btnUseTapAbility').onclick = useTapAbility;
 $('btnChargeMana').onclick = () => { manaChargeMode = !manaChargeMode; renderBattle(); };
 $('btnAttackPhase').onclick = () => {
   engine.enterAttackPhase();

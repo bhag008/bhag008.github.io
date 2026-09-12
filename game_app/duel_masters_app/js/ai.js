@@ -68,6 +68,12 @@ function sortCandidates(engine, side, spec, candidates) {
     const maxQty = Math.max(...pool);
     const desired = Math.min(2, maxQty);
     pool.sort((a, b) => (a === desired ? -1 : b === desired ? 1 : 0));
+  } else if (spec.kind === 'enemyDeckCard') {
+    pool.sort((a, b) => {
+      const oa = engine.players[engine.opponent(side)].deck.find((x) => x.uid === a);
+      const ob = engine.players[engine.opponent(side)].deck.find((x) => x.uid === b);
+      return getCard(ob.cardId).cost - getCard(oa.cardId).cost;
+    });
   }
   return pool;
 }
@@ -187,6 +193,18 @@ export function* cpuTurnSteps(engine) {
     }
     yield { type: 'attack', attackerUid: atk.uid, result };
     if (engine.isGameOver()) return;
+  }
+
+  // タップ能力(第6弾): 攻撃せずに残った(温存した/対象が無かった)クリーチャーで、使える能力があれば使う
+  for (const c of [...engine.players[side].battle]) {
+    if (engine.isGameOver()) return;
+    if (!engine.canUseTapAbility(side, c.uid)) continue;
+    const result = engine.useTapAbility(side, c.uid);
+    if (result.awaitingTapAbilityTarget) {
+      const spec = engine.pendingTapAbility.ability.target;
+      engine.resolveTapAbility(chooseTargetsForCpu(engine, side, spec));
+    }
+    yield { type: 'tapAbility', uid: c.uid };
   }
 
   yield { type: 'attacksDone' };

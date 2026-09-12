@@ -109,6 +109,8 @@ h1, h2, h3 { margin: 0 0 8px; }
 .badge-T { background: #7a2c4a; color: #ffb3d9; }
 .badge-SA { background: #2c6e4a; color: #9cffcf; }
 .badge-SV { background: #5c3d8a; color: #d9b3ff; }
+.badge-TT { background: #2c5c6e; color: #9ce8ff; }
+.badge-MD { background: #6e2c5c; color: #ff9cd9; }
 .zone-card.attackable { outline: 2px dashed var(--danger); cursor: pointer; }
 .badge-S { background: #6e5c2c; color: #ffe08a; }
 
