@@ -102,7 +102,7 @@ const CARD_DB = {
   },
   fieldMedic: {
     name: '応急手当', type: 'skill', cost: 1, rarity: 'common', target: 'self',
-    values: { heal: 4 }, upgradedValues: { heal: 7 },
+    values: { heal: 5 }, upgradedValues: { heal: 8 },
     desc: v => `HPを${v.heal}回復する。`,
     effects: v => [{ type: 'heal', amount: v.heal }],
   },
@@ -128,7 +128,7 @@ const CARD_DB = {
   },
   drainStrike: {
     name: '吸血の刃', type: 'attack', cost: 2, rarity: 'uncommon', target: 'enemy',
-    values: { dmg: 10, heal: 3 }, upgradedValues: { dmg: 13, heal: 5 },
+    values: { dmg: 10, heal: 4 }, upgradedValues: { dmg: 13, heal: 6 },
     desc: v => `敵に${v.dmg}ダメージ。自身のHPを${v.heal}回復する。`,
     effects: v => [{ type: 'damage', amount: v.dmg }, { type: 'heal', amount: v.heal }],
   },
@@ -146,7 +146,7 @@ const CARD_DB = {
     effects: v => [{ type: 'energy', amount: v.energy }, { type: 'draw', amount: v.draw }],
   },
   toxicCloud: {
-    name: '毒霧', type: 'skill', cost: 2, rarity: 'uncommon', target: 'all',
+    name: '毒霧', type: 'skill', cost: 1, rarity: 'uncommon', target: 'all',
     values: { poison: 4 }, upgradedValues: { poison: 6 },
     desc: v => `敵全体に毒${v.poison}を付与。`,
     effects: v => [{ type: 'debuff', stat: 'poison', amount: v.poison, target: 'all' }],
@@ -204,7 +204,8 @@ const CARD_DB = {
   secondWind: {
     name: '不屈の闘志', type: 'skill', cost: 2, rarity: 'rare', target: 'self',
     values: { heal: 10, energy: 1 }, upgradedValues: { heal: 15, energy: 1 },
-    desc: v => `HPを${v.heal}回復し、エナジーを${v.energy}獲得する。`,
+    desc: v => `HPを${v.heal}回復し、エナジーを${v.energy}獲得する。使用後、このカードは消滅する。`,
+    exhaustSelf: true,
     effects: v => [{ type: 'heal', amount: v.heal }, { type: 'energy', amount: v.energy }],
   },
 };
